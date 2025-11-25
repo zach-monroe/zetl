@@ -1,0 +1,33 @@
+
+{{ block "cards" . }}
+      <div class="container">
+        <div class="header">
+        <h1>zetl</h1> 
+        </div>
+        <div class="content">
+            {{ template "items" . }}
+        </div>
+        <div class="footer">
+    </div>
+{{ end }}
+
+
+{{ block "items" . }}
+    {{ range .items }}
+      <div class="card">
+        <div class="quote">
+        <h3>{{ .Quote }}</h3> 
+        </div>
+        <div class="author">
+          <p>{{ .Author }}</p>
+      </div>
+        <div class="tags">
+        {{ range .Tags }}
+          <p>{{ . }}</p>
+        {{ end }}
+      </div>
+        
+    </div>
+    
+  {{ end }}
+ {{ end }}
