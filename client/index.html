@@ -1,13 +1,48 @@
-<!doctype html>
+{{ block "index" . }}
+<!DOCTYPE html>
 <html lang="en">
   <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>zettelkasten</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>zetl</title>
+    <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.8/dist/htmx.min.js"></script>
+    <link href="css/style.css" rel="stylesheet">
   </head>
   <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
+    {{ template "cards" . }}
   </body>
 </html>
+{{ end }}
+
+{{ block "cards" . }}
+      <div class="container">
+        <div class="header">
+        <h1>zetl</h1> 
+        </div>
+        <div class="content">
+            {{ template "items" . }}
+        </div>
+        <div class="footer">
+    </div>
+{{ end }}
+
+
+{{ block "items" . }}
+    {{ range .items }}
+      <div class="card">
+        <div class="quote">
+        <h3>{{ .Quote }}</h3> 
+        </div>
+        <div class="author">
+          <p>{{ .Author }}</p>
+      </div>
+        <div class="tags">
+        {{ range .Tags }}
+          <p>{{ . }}</p>
+        {{ end }}
+      </div>
+        
+    </div>
+    
+  {{ end }}
+{{ end }}

@@ -8,14 +8,26 @@ import (
 
 var db = make(map[string]string)
 
+type Quote struct {
+	Author string
+	Quote  string
+	ID     int
+	Tags   []string
+}
+
 func setupRouter() *gin.Engine {
 	// Disable Console Color
 	// gin.DisableConsoleColor()
+	items := []Quote{
+		{"C.S. Lewis", "Something or another about being humble but it's actually Rick Warren", 1, []string{"inpsiring", "faith"}},
+		{"JRR Tolkien", "Lots of lunches and such", 2, []string{"fantasy", "wow"}},
+		{"Gene Wolfe", "My main character is so interesting, mostly because he's insane", 3, []string{"soneat", "wow"}},
+		{"Dean Koontz", "Wow tire salesman", 4, []string{"tires", "wow"}},
+	}
 	r := gin.Default()
-
-	// Ping test
-	r.GET("/ping", func(c *gin.Context) {
-		c.String(http.StatusOK, "pong")
+	r.LoadHTMLGlob("../client/*")
+	r.GET("/", func(c *gin.Context) {
+		c.HTML(http.StatusOK, "index", gin.H{"items": items})
 	})
 
 	// Get user value
