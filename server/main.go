@@ -25,7 +25,7 @@ func setupRouter() *gin.Engine {
 		{"Dean Koontz", "Wow tire salesman", 4, []string{"tires", "wow"}},
 	}
 	r := gin.Default()
-	r.LoadHTMLGlob("../client/*")
+	r.LoadHTMLFiles("../client/index.html", "../client/blocks.html")
 	r.GET("/", func(c *gin.Context) {
 		c.HTML(http.StatusOK, "index", gin.H{"items": items})
 	})
