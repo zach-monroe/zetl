@@ -1,7 +1,12 @@
 package main
 
 import (
+	"database/sql"
+	"fmt"
 	"net/http"
+	"os"
+
+	_"github.com/lib/pq"
 
 	"github.com/gin-gonic/gin"
 )
@@ -17,13 +22,6 @@ type Quote struct {
 	Tags   []string
 }
 
-func getQuoteData(c *gin.Context) string {
-	var quoteData string
-	quoteData = ""
-	return quoteData
-}
-
-func setupRouter() *gin.Engine {
 	// Disable Console Color
 	// gin.DisableConsoleColor()
 	items := []Quote{
