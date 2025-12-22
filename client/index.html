@@ -6,9 +6,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>zetl</title>
     <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.8/dist/htmx.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <link href='/css/style.css' rel="stylesheet">
   </head>
-  <body class="bg-gray-600">
+  <body class="bg-gray-600 font-serif">
     <div class="flex items-center flex-col">
     {{ template "cards" . }}
     </div>
@@ -16,3 +16,35 @@
 </html>
 {{ end }}
 
+
+{{ define "cards" }}
+
+  <div class="bg-gray-600 container">
+    <div class="bg-gray-600 justify-center header">
+      <h1 class="text-center text-xl font-sans font-bold hover:scale-105">zetl</h1> 
+    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+      {{ template "items" . }}
+    </div>
+    <div class="footer">
+    </div>
+  </div>
+{{ end }}
+
+{{ define "items" }}
+  {{ range .items }}
+    <div class="bg-gray-400 rounded-lg p-4 m-8 hover:shadow-lg items-center hover:scale-105 card">
+      <div class="quote">
+        <h3>{{ .Trunc }}</h3> 
+      </div>
+      <div class="author">
+        <p>{{ .Author }}</p>
+      </div>
+      <div class="tags">
+        {{ range .Tags }}
+          <span class="font-italic text-xs font-extralight">{{ . }}</span>
+        {{ end }}
+      </div>
+    </div>
+  {{ end }}
+{{ end }}
