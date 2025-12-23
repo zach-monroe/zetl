@@ -10,25 +10,8 @@ import (
 	_ "github.com/lib/pq"
 )
 
-//var dbConn *sql.DB
-
-//func loadEnvFromParent() {
-//	// Get current executable directory
-//	execPath, err := os.Executable()
-//	if err != nil {
-//		log.Fatal("Error getting executable path:", err)
-//	}
-//
-//	// Go up one directory to find .env
-//	parentDir := filepath.Dir(filepath.Dir(execPath))
-//	envPath := filepath.Join(parentDir, ".env")
-//
-//	// Load .env file
-//	if err := godotenv.Load(envPath); err != nil {
-//		log.Printf("No .env file found at %s, using system env vars", envPath)
-//	}
-//}
-
+// Establishes the connection to the database using the information stored in ../.env
+// returns the db connection
 func StartDatabase() *sql.DB {
 	host := os.Getenv("DB_HOSTNAME")
 	user := os.Getenv("DB_USERNAME")
@@ -58,6 +41,8 @@ func StartDatabase() *sql.DB {
 	return db
 }
 
+// used for the GET reguest at the "/" end point. Returns all of the quotes in the quote database
+// returns the quotes as a json object.
 func FetchQuotesAsJson(db *sql.DB) string {
 	query := "SELECT * FROM quotes"
 	rows, err := db.Query(query)
@@ -114,13 +99,8 @@ func FetchQuotesAsJson(db *sql.DB) string {
 	return string(jsonData)
 }
 
-//func main() {
-//	// Load .env from parent directory first
-//	loadEnvFromParent()
-//
-//	dbConn = StartDatabase()
+// EXAMPLE USAGE
+//	dbConn := StartDatabase()
 //	defer dbConn.Close()
 //
 //	jsonResult := FetchQuotesAsJson(dbConn)
-//	fmt.Println(jsonResult)
-//}
