@@ -2,30 +2,125 @@ package database
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"os"
+	"strconv"
 
 	_ "github.com/lib/pq"
 )
 
-func GetQuoteData() *sql.DB {
+//var dbConn *sql.DB
+
+//func loadEnvFromParent() {
+//	// Get current executable directory
+//	execPath, err := os.Executable()
+//	if err != nil {
+//		log.Fatal("Error getting executable path:", err)
+//	}
+//
+//	// Go up one directory to find .env
+//	parentDir := filepath.Dir(filepath.Dir(execPath))
+//	envPath := filepath.Join(parentDir, ".env")
+//
+//	// Load .env file
+//	if err := godotenv.Load(envPath); err != nil {
+//		log.Printf("No .env file found at %s, using system env vars", envPath)
+//	}
+//}
+
+func StartDatabase() *sql.DB {
 	host := os.Getenv("DB_HOSTNAME")
 	user := os.Getenv("DB_USERNAME")
 	password := os.Getenv("DB_PASSWORD")
-	port := os.Getenv("DB_PORT")
+	portStr := os.Getenv("DB_PORT")
 	dbname := os.Getenv("DB_NAME")
+
+	port, err := strconv.Atoi(portStr)
+	if err != nil {
+		panic("Invalid DB_PORT: " + err.Error())
+	}
+
 	psqlInfo := fmt.Sprintf("host=%s port=%d user=%s "+
 		"password=%s dbname=%s sslmode=disable",
 		host, port, user, password, dbname)
+
 	db, err := sql.Open("postgres", psqlInfo)
 	if err != nil {
 		panic(err)
 	}
-	defer db.Close()
+
 	err = db.Ping()
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println("connected to the database yo!")
+
 	return db
 }
+
+func FetchQuotesAsJson(db *sql.DB) string {
+	query := "SELECT * FROM quotes"
+	rows, err := db.Query(query)
+	if err != nil {
+		panic(err)
+	}
+	defer rows.Close()
+
+	columns, err := rows.Columns()
+	if err != nil {
+		panic(err)
+	}
+
+	count := len(columns)
+	tableData := make([]map[string]interface{}, 0)
+	values := make([]interface{}, count)
+	valuePtrs := make([]interface{}, count)
+
+	for i := 0; i < count; i++ {
+		valuePtrs[i] = &values[i]
+	}
+
+	for rows.Next() {
+		err := rows.Scan(valuePtrs...)
+		if err != nil {
+			panic(err)
+		}
+
+		entry := make(map[string]interface{})
+		for i, col := range columns {
+			var v interface{}
+			val := values[i]
+
+			b, ok := val.([]byte)
+			if ok {
+				v = string(b)
+			} else {
+				v = val
+			}
+			entry[col] = v
+		}
+		tableData = append(tableData, entry)
+	}
+
+	if err = rows.Err(); err != nil {
+		panic(err)
+	}
+
+	jsonData, err := json.MarshalIndent(tableData, "", "  ")
+	if err != nil {
+		panic(err)
+	}
+
+	return string(jsonData)
+}
+
+//func main() {
+//	// Load .env from parent directory first
+//	loadEnvFromParent()
+//
+//	dbConn = StartDatabase()
+//	defer dbConn.Close()
+//
+//	jsonResult := FetchQuotesAsJson(dbConn)
+//	fmt.Println(jsonResult)
+//}
