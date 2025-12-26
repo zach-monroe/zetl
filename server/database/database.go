@@ -5,8 +5,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
+	"runtime"
 	"strconv"
+	"strings"
 
+	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 )
 
@@ -17,6 +21,13 @@ type DBConnection struct {
 
 // StartDatabase connects to PostgreSQL using environment variables
 func StartDatabase() *DBConnection {
+	_, filename, _, _ := runtime.Caller(0) // Gets database.go location
+	dir := filepath.Dir(filename)          // /path/to/server/database
+	parentDir := filepath.Dir(dir)         // /path/to/server (parent)
+	envPath := filepath.Join(parentDir, ".env")
+	if err := godotenv.Load(envPath); err != nil {
+		fmt.Printf("⚠️  .env not found at %s, using system env vars\n", envPath)
+	}
 	host := os.Getenv("DB_HOSTNAME")
 	user := os.Getenv("DB_USERNAME")
 	password := os.Getenv("DB_PASSWORD")
@@ -43,8 +54,6 @@ func StartDatabase() *DBConnection {
 	fmt.Println("✅ Connected to database successfully.")
 	return &DBConnection{DB: db}
 }
-
-// FetchQuotesAsJson returns all rows from "quotes" as a JSON string
 func FetchQuotesAsJson(db *sql.DB) string {
 	query := "SELECT * FROM quotes"
 	rows, err := db.Query(query)
@@ -63,27 +72,38 @@ func FetchQuotesAsJson(db *sql.DB) string {
 	values := make([]interface{}, count)
 	valuePtrs := make([]interface{}, count)
 
-	for i := 0; i < count; i++ {
+	for i := range values {
 		valuePtrs[i] = &values[i]
 	}
 
 	for rows.Next() {
-		err := rows.Scan(valuePtrs...)
-		if err != nil {
+		if err := rows.Scan(valuePtrs...); err != nil {
 			panic(err)
 		}
 
 		entry := make(map[string]interface{})
 		for i, col := range columns {
-			var v interface{}
 			val := values[i]
 
-			if b, ok := val.([]byte); ok {
-				v = string(b)
-			} else {
-				v = val
+			// Handle SQL byte arrays, JSONB, and tags array conversion cleanly
+			switch v := val.(type) {
+			case []byte:
+				strVal := string(v)
+
+				// 🔥 Handle tags like {a,b,c}
+				if col == "tags" {
+					clean := strings.Trim(strVal, "{}")
+					if len(clean) > 0 {
+						entry[col] = strings.Split(clean, ",")
+					} else {
+						entry[col] = []string{}
+					}
+				} else {
+					entry[col] = strVal
+				}
+			default:
+				entry[col] = v
 			}
-			entry[col] = v
 		}
 		tableData = append(tableData, entry)
 	}
