@@ -10,6 +10,10 @@ import (
 	_ "github.com/lib/pq"
 )
 
+type DBConnection struct {
+	DB *sql.DB
+}
+
 // Establishes the connection to the database using the information stored in ../.env
 // returns the db connection
 func StartDatabase() *sql.DB {
