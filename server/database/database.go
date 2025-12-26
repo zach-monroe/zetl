@@ -10,13 +10,13 @@ import (
 	_ "github.com/lib/pq"
 )
 
+// DBConnection holds the SQL connection for convenience
 type DBConnection struct {
 	DB *sql.DB
 }
 
-// Establishes the connection to the database using the information stored in ../.env
-// returns the db connection
-func StartDatabase() *sql.DB {
+// StartDatabase connects to PostgreSQL using environment variables
+func StartDatabase() *DBConnection {
 	host := os.Getenv("DB_HOSTNAME")
 	user := os.Getenv("DB_USERNAME")
 	password := os.Getenv("DB_PASSWORD")
@@ -28,8 +28,7 @@ func StartDatabase() *sql.DB {
 		panic("Invalid DB_PORT: " + err.Error())
 	}
 
-	psqlInfo := fmt.Sprintf("host=%s port=%d user=%s "+
-		"password=%s dbname=%s sslmode=disable",
+	psqlInfo := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable",
 		host, port, user, password, dbname)
 
 	db, err := sql.Open("postgres", psqlInfo)
@@ -37,16 +36,15 @@ func StartDatabase() *sql.DB {
 		panic(err)
 	}
 
-	err = db.Ping()
-	if err != nil {
+	if err := db.Ping(); err != nil {
 		panic(err)
 	}
 
-	return db
+	fmt.Println("✅ Connected to database successfully.")
+	return &DBConnection{DB: db}
 }
 
-// used for the GET reguest at the "/" end point. Returns all of the quotes in the quote database
-// returns the quotes as a json object.
+// FetchQuotesAsJson returns all rows from "quotes" as a JSON string
 func FetchQuotesAsJson(db *sql.DB) string {
 	query := "SELECT * FROM quotes"
 	rows, err := db.Query(query)
@@ -80,8 +78,7 @@ func FetchQuotesAsJson(db *sql.DB) string {
 			var v interface{}
 			val := values[i]
 
-			b, ok := val.([]byte)
-			if ok {
+			if b, ok := val.([]byte); ok {
 				v = string(b)
 			} else {
 				v = val
@@ -102,9 +99,3 @@ func FetchQuotesAsJson(db *sql.DB) string {
 
 	return string(jsonData)
 }
-
-// EXAMPLE USAGE
-//	dbConn := StartDatabase()
-//	defer dbConn.Close()
-//
-//	jsonResult := FetchQuotesAsJson(dbConn)
