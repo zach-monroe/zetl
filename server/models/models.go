@@ -10,4 +10,3 @@ type Quote struct {
 }
 
 type Quotes []Quote
-

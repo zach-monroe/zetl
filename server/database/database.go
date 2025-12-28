@@ -119,3 +119,29 @@ func FetchQuotesAsJson(db *sql.DB) string {
 
 	return string(jsonData)
 }
+
+func AddQuoteToDatabase(db *sql.DB, jsonBytes []byte) error {
+	var q map[string]interface{}
+	if err := json.Unmarshal(jsonBytes, &q); err != nil {
+		return err
+	}
+
+	userID := int(q["user_id"].(float64))
+	quote := q["quote"].(string)
+	author := q["author"].(string)
+	book := q["book"].(string)
+	tagsRaw := q["tags"].([]interface{})
+	tags := make([]string, len(tagsRaw))
+	for i, t := range tagsRaw {
+		tags[i] = t.(string)
+	}
+
+	tagsStr := `{` + strings.Join(tags, `,`) + `}`
+
+	_, err := db.Exec(`
+        INSERT INTO quotes (user_id, quote, author, book, tags) 
+        VALUES ($1, $2, $3, $4, $5)
+    `, userID, quote, author, book, tagsStr)
+
+	return err
+}
