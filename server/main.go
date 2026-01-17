@@ -3,12 +3,16 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
+	"os"
 
+	"github.com/gin-contrib/sessions"
+	"github.com/gin-contrib/sessions/postgres"
 	"github.com/gin-gonic/gin"
 	_ "github.com/lib/pq"
 	"github.com/zach-monroe/zetl/server/database"
+	"github.com/zach-monroe/zetl/server/handlers"
+	"github.com/zach-monroe/zetl/server/middleware"
 	"github.com/zach-monroe/zetl/server/models"
 )
 
@@ -31,65 +35,68 @@ func UnmarshalQuotes(data []byte) (models.Quotes, error) {
 func setupRouter(dbConn *database.DBConnection) *gin.Engine {
 	r := gin.Default()
 
+	// Set up PostgreSQL session store
+	sessionSecret := os.Getenv("SESSION_SECRET")
+	if sessionSecret == "" {
+		panic("SESSION_SECRET environment variable is not set")
+	}
+
+	store, err := postgres.NewStore(dbConn.DB, []byte(sessionSecret))
+	if err != nil {
+		panic(fmt.Sprintf("Failed to create session store: %v", err))
+	}
+
+	// Configure session options
+	store.Options(sessions.Options{
+		Path:     "/",
+		MaxAge:   86400, // 24 hours
+		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
+	})
+
+	r.Use(sessions.Sessions("zetl_session", store))
+
 	// HTML template
 	r.LoadHTMLFiles("../client/index.html")
 	r.Static("/css", "../client/css")
 
-	// Fetch quotes from database as JSON and unmarshal
-	quotesJSON := database.FetchQuotesAsJson(dbConn.DB)
-	quotes, err := UnmarshalQuotes([]byte(quotesJSON))
-	if err != nil {
-		panic(fmt.Sprintf("Failed to unmarshal quotes: %v", err))
-	}
-
-	// Root endpoint renders HTML
+	// Public routes
 	r.GET("/", func(c *gin.Context) {
+		// Fetch quotes from database as JSON and unmarshal
+		quotesJSON := database.FetchQuotesAsJson(dbConn.DB)
+		quotes, err := UnmarshalQuotes([]byte(quotesJSON))
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load quotes"})
+			return
+		}
 		c.HTML(http.StatusOK, "index.html", gin.H{"items": quotes})
 	})
 
-	// Example user route (replace with real DB query later)
-	r.GET("/user/:name", func(c *gin.Context) {
-		user := c.Param("name")
-		c.JSON(http.StatusOK, gin.H{"user": user, "status": "no value"})
-	})
+	// Public API routes
+	r.GET("/user/:id/quotes", handlers.GetUserQuotesHandler(dbConn.DB))
 
-	r.POST("/quote", func(c *gin.Context) {
-		// Read raw JSON body directly
-		bodyBytes, err := io.ReadAll(c.Request.Body)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "cannot read body"})
-			return
-		}
+	// Authentication routes
+	authGroup := r.Group("/auth")
+	{
+		authGroup.POST("/signup", handlers.SignupHandler(dbConn.DB))
+		authGroup.POST("/login", handlers.LoginHandler(dbConn.DB))
+		authGroup.POST("/logout", handlers.LogoutHandler())
+	}
 
-		// Pass raw bytes straight to database (no intermediate struct)
-		if err := database.AddQuoteToDatabase(dbConn.DB, bodyBytes); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
-		}
+	// Protected routes - require authentication
+	apiGroup := r.Group("/api")
+	apiGroup.Use(middleware.AuthRequired())
+	{
+		// Get current user
+		apiGroup.GET("/user", handlers.GetCurrentUserHandler(dbConn.DB))
 
-		c.JSON(http.StatusCreated, gin.H{"status": "success"})
-	})
+		// Quote creation
+		apiGroup.POST("/quote", handlers.CreateQuoteHandler(dbConn.DB))
 
-	// Auth group
-	authorized := r.Group("/", gin.BasicAuth(gin.Accounts{
-		"foo":  "bar",
-		"manu": "123",
-	}))
-
-	authorized.POST("/admin", func(c *gin.Context) {
-		user := c.MustGet(gin.AuthUserKey).(string)
-		var input struct {
-			Value string `json:"value" binding:"required"`
-		}
-
-		if c.ShouldBindJSON(&input) == nil {
-			// You can add database update code here:
-			// database.SaveAdminValue(dbConn.DB, user, input.Value)
-			c.JSON(http.StatusOK, gin.H{"user": user, "status": "ok"})
-		} else {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid JSON"})
-		}
-	})
+		// Quote modification (requires ownership)
+		apiGroup.PUT("/quote/:id", middleware.QuoteOwnershipRequired(dbConn.DB), handlers.UpdateQuoteHandler(dbConn.DB))
+		apiGroup.DELETE("/quote/:id", middleware.QuoteOwnershipRequired(dbConn.DB), handlers.DeleteQuoteHandler(dbConn.DB))
+	}
 
 	return r
 }
