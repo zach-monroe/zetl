@@ -7,6 +7,7 @@ type Quote struct {
 	Author  string   `json:"author"`
 	Book    string   `json:"book"`
 	Tags    []string `json:"tags"`
+	Notes   string   `json:"notes"`
 }
 
 type Quotes []Quote

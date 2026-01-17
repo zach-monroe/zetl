@@ -11,7 +11,7 @@ import (
 // GetQuoteByID retrieves a single quote by its ID
 func GetQuoteByID(db *sql.DB, quoteID int) (map[string]interface{}, error) {
 	query := `
-		SELECT quote_id, user_id, quote, author, book, tags
+		SELECT quote_id, user_id, quote, author, book, tags, COALESCE(notes, '') as notes
 		FROM quotes
 		WHERE quote_id = $1
 	`
@@ -23,9 +23,10 @@ func GetQuoteByID(db *sql.DB, quoteID int) (map[string]interface{}, error) {
 		author string
 		book   string
 		tags   []byte
+		notes  string
 	)
 
-	err := db.QueryRow(query, quoteID).Scan(&qID, &userID, &quote, &author, &book, &tags)
+	err := db.QueryRow(query, quoteID).Scan(&qID, &userID, &quote, &author, &book, &tags, &notes)
 	if err == sql.ErrNoRows {
 		return nil, errors.New("quote not found")
 	}
@@ -50,22 +51,23 @@ func GetQuoteByID(db *sql.DB, quoteID int) (map[string]interface{}, error) {
 		"author":   author,
 		"book":     book,
 		"tags":     tagsList,
+		"notes":    notes,
 	}
 
 	return result, nil
 }
 
 // UpdateQuote updates a quote's content
-func UpdateQuote(db *sql.DB, quoteID int, quote, author, book string, tags []string) error {
+func UpdateQuote(db *sql.DB, quoteID int, quote, author, book string, tags []string, notes string) error {
 	tagsStr := `{` + strings.Join(tags, `,`) + `}`
 
 	query := `
 		UPDATE quotes
-		SET quote = $1, author = $2, book = $3, tags = $4, updated_at = CURRENT_TIMESTAMP
-		WHERE quote_id = $5
+		SET quote = $1, author = $2, book = $3, tags = $4, notes = $5, updated_at = CURRENT_TIMESTAMP
+		WHERE quote_id = $6
 	`
 
-	result, err := db.Exec(query, quote, author, book, tagsStr, quoteID)
+	result, err := db.Exec(query, quote, author, book, tagsStr, notes, quoteID)
 	if err != nil {
 		return err
 	}
@@ -106,7 +108,7 @@ func DeleteQuote(db *sql.DB, quoteID int) error {
 // GetQuotesByUserID retrieves all quotes for a specific user
 func GetQuotesByUserID(db *sql.DB, userID int) ([]map[string]interface{}, error) {
 	query := `
-		SELECT quote_id, user_id, quote, author, book, tags
+		SELECT quote_id, user_id, quote, author, book, tags, COALESCE(notes, '') as notes
 		FROM quotes
 		WHERE user_id = $1
 		ORDER BY created_at DESC
@@ -128,9 +130,10 @@ func GetQuotesByUserID(db *sql.DB, userID int) ([]map[string]interface{}, error)
 			author string
 			book   string
 			tags   []byte
+			notes  string
 		)
 
-		if err := rows.Scan(&qID, &uID, &quote, &author, &book, &tags); err != nil {
+		if err := rows.Scan(&qID, &uID, &quote, &author, &book, &tags, &notes); err != nil {
 			return nil, err
 		}
 
@@ -151,6 +154,7 @@ func GetQuotesByUserID(db *sql.DB, userID int) ([]map[string]interface{}, error)
 			"author":   author,
 			"book":     book,
 			"tags":     tagsList,
+			"notes":    notes,
 		}
 
 		quotes = append(quotes, result)
@@ -180,17 +184,17 @@ func VerifyQuoteOwnership(db *sql.DB, quoteID, userID int) (bool, error) {
 }
 
 // CreateQuote inserts a new quote into the database
-func CreateQuote(db *sql.DB, userID int, quote, author, book string, tags []string) (int, error) {
+func CreateQuote(db *sql.DB, userID int, quote, author, book string, tags []string, notes string) (int, error) {
 	tagsArray := pq.Array(tags)
 
 	query := `
-		INSERT INTO quotes (user_id, quote, author, book, tags)
-		VALUES ($1, $2, $3, $4, $5)
+		INSERT INTO quotes (user_id, quote, author, book, tags, notes)
+		VALUES ($1, $2, $3, $4, $5, $6)
 		RETURNING quote_id
 	`
 
 	var quoteID int
-	err := db.QueryRow(query, userID, quote, author, book, tagsArray).Scan(&quoteID)
+	err := db.QueryRow(query, userID, quote, author, book, tagsArray, notes).Scan(&quoteID)
 	if err != nil {
 		return 0, err
 	}

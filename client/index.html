@@ -8,43 +8,102 @@
     <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.8/dist/htmx.min.js"></script>
     <link href='/css/style.css' rel="stylesheet">
   </head>
-  <body class="bg-gray-600 font-serif">
-    <div class="flex items-center flex-col">
-    {{ template "cards" . }}
+  <body class="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 min-h-screen font-serif">
+    <div class="flex items-center flex-col py-8 px-4">
+      {{ template "header" . }}
+      {{ template "cards" . }}
     </div>
   </body>
 </html>
 {{ end }}
 
+{{ define "header" }}
+<header class="mb-12 text-center">
+  <h1 class="text-4xl font-bold text-white font-sans tracking-tight hover:scale-105 transition-transform duration-300 cursor-default">
+    zetl
+  </h1>
+  <p class="text-slate-400 mt-2 text-sm">Your collection of wisdom</p>
+</header>
+{{ end }}
 
 {{ define "cards" }}
-
-  <div class="bg-gray-600 container">
-    <div class="bg-gray-600 justify-center header">
-      <h1 class="text-center text-xl font-sans font-bold hover:scale-105">zetl</h1> 
-    </div>
-    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-      {{ template "items" . }}
-    </div>
-    <div class="footer">
-    </div>
+<div class="w-full max-w-7xl">
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+    {{ template "items" . }}
   </div>
+</div>
 {{ end }}
 
 {{ define "items" }}
-  {{ range .items }}
-    <div class="bg-gray-400 rounded-lg p-4 m-8 hover:shadow-lg items-center hover:scale-105 card">
-      <div class="quote">
-        <h3>{{ .Quote }}</h3> 
+{{ range .items }}
+<div class="quote-card group" onclick="this.classList.toggle('flipped')">
+  <div class="card-inner">
+    <!-- Front of card -->
+    <div class="card-front bg-gradient-to-br from-slate-700 to-slate-800 rounded-xl shadow-lg border border-slate-600/50">
+      <!-- Content -->
+      <div class="card-content p-6">
+        <p class="text-slate-100 text-lg leading-relaxed quote-text">
+          "{{ .Quote }}"
+        </p>
       </div>
-      <div class="author">
-        <p>{{ .Author }}</p>
-      </div>
-      <div class="tags">
-        {{ range .Tags }}
-          <span class="font-italic text-xs font-extralight">{{ . }}</span>
-        {{ end }}
+      <!-- Footer -->
+      <div class="card-footer px-6 py-3 border-t border-slate-600/30">
+        <div class="flex justify-between items-center">
+          <div>
+            <p class="text-amber-400 font-medium text-sm">{{ .Author }}</p>
+            {{ if .Book }}
+            <p class="text-slate-400 text-xs italic">{{ .Book }}</p>
+            {{ end }}
+          </div>
+          <span class="text-slate-500 text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity">
+            Flip
+          </span>
+        </div>
       </div>
     </div>
-  {{ end }}
+
+    <!-- Back of card -->
+    <div class="card-back bg-gradient-to-br from-amber-900/90 to-slate-800 rounded-xl shadow-lg border border-amber-600/30">
+      <!-- Content -->
+      <div class="card-content p-6">
+        <!-- Tags -->
+        <div class="mb-4">
+          <h4 class="text-amber-400 text-xs font-semibold uppercase tracking-wider mb-3">Tags</h4>
+          <div class="flex flex-wrap gap-2">
+            {{ range .Tags }}
+            <span class="bg-slate-700/80 text-slate-200 px-3 py-1 rounded-full text-xs font-medium border border-slate-600/50">
+              {{ . }}
+            </span>
+            {{ else }}
+            <span class="text-slate-500 text-sm italic">No tags</span>
+            {{ end }}
+          </div>
+        </div>
+
+        <!-- Notes -->
+        <div>
+          <h4 class="text-amber-400 text-xs font-semibold uppercase tracking-wider mb-3">Notes</h4>
+          {{ if .Notes }}
+          <p class="text-slate-300 text-sm leading-relaxed notes-text">{{ .Notes }}</p>
+          {{ else }}
+          <p class="text-slate-500 text-sm italic">No notes added</p>
+          {{ end }}
+        </div>
+      </div>
+      <!-- Footer -->
+      <div class="card-footer px-6 py-3 border-t border-amber-600/20">
+        <div class="flex justify-between items-center">
+          <div>
+            <p class="text-slate-400 text-xs truncate max-w-[180px]">"{{ .Quote }}"</p>
+            <p class="text-amber-400/70 text-xs">- {{ .Author }}</p>
+          </div>
+          <span class="text-amber-400/50 text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity">
+            Flip
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{{ end }}
 {{ end }}

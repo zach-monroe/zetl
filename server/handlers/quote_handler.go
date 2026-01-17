@@ -14,6 +14,7 @@ type QuoteRequest struct {
 	Author string   `json:"author" binding:"required"`
 	Book   string   `json:"book" binding:"required"`
 	Tags   []string `json:"tags"`
+	Notes  string   `json:"notes"`
 }
 
 // CreateQuoteHandler handles creating a new quote
@@ -38,7 +39,7 @@ func CreateQuoteHandler(db *sql.DB) gin.HandlerFunc {
 		}
 
 		// Create quote
-		quoteID, err := database.CreateQuote(db, userID.(int), req.Quote, req.Author, req.Book, req.Tags)
+		quoteID, err := database.CreateQuote(db, userID.(int), req.Quote, req.Author, req.Book, req.Tags, req.Notes)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create quote", "details": err.Error()})
 			return
@@ -73,7 +74,7 @@ func UpdateQuoteHandler(db *sql.DB) gin.HandlerFunc {
 		}
 
 		// Update quote
-		err := database.UpdateQuote(db, quoteID.(int), req.Quote, req.Author, req.Book, req.Tags)
+		err := database.UpdateQuote(db, quoteID.(int), req.Quote, req.Author, req.Book, req.Tags, req.Notes)
 		if err != nil {
 			if err.Error() == "quote not found" {
 				c.JSON(http.StatusNotFound, gin.H{"error": "Quote not found"})
