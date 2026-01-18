@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/lib/pq"
+	"github.com/zach-monroe/zetl/server/models"
 )
 
 // GetQuoteByID retrieves a single quote by its ID
@@ -200,4 +201,66 @@ func CreateQuote(db *sql.DB, userID int, quote, author, book string, tags []stri
 	}
 
 	return quoteID, nil
+}
+
+// FetchQuotesByUserID retrieves all quotes for a specific user as models.Quotes
+func FetchQuotesByUserID(db *sql.DB, userID int) (models.Quotes, error) {
+	query := `
+		SELECT quote_id, user_id, quote, author, book, tags, COALESCE(notes, '') as notes
+		FROM quotes
+		WHERE user_id = $1
+		ORDER BY created_at DESC
+	`
+
+	rows, err := db.Query(query, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	quotes := make(models.Quotes, 0)
+
+	for rows.Next() {
+		var (
+			qID    int
+			uID    int
+			quote  string
+			author string
+			book   string
+			tags   []byte
+			notes  string
+		)
+
+		if err := rows.Scan(&qID, &uID, &quote, &author, &book, &tags, &notes); err != nil {
+			return nil, err
+		}
+
+		// Parse tags array
+		tagsStr := string(tags)
+		clean := strings.Trim(tagsStr, "{}")
+		var tagsList []string
+		if len(clean) > 0 {
+			tagsList = strings.Split(clean, ",")
+		} else {
+			tagsList = []string{}
+		}
+
+		q := models.Quote{
+			QuoteID: qID,
+			UserID:  uID,
+			Quote:   quote,
+			Author:  author,
+			Book:    book,
+			Tags:    tagsList,
+			Notes:   notes,
+		}
+
+		quotes = append(quotes, q)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return quotes, nil
 }

@@ -1,0 +1,99 @@
+{{ template "base" . }}
+
+{{ define "content" }}
+<div class="w-full max-w-md">
+  <div class="auth-card bg-zinc-900 rounded-xl shadow-xl border border-zinc-800 p-8">
+    <h2 class="text-2xl font-bold text-zinc-100 mb-6 text-center">Welcome Back</h2>
+
+    {{ if .error }}
+    <div class="error-message bg-red-900/50 border border-red-700 text-red-200 px-4 py-3 rounded-lg mb-6 text-sm">
+      {{ .error }}
+    </div>
+    {{ end }}
+
+    <form id="login-form" class="space-y-5">
+      <div>
+        <label for="username_or_email" class="block text-sm font-medium text-zinc-300 mb-2">
+          Username or Email
+        </label>
+        <input
+          type="text"
+          id="username_or_email"
+          name="username_or_email"
+          required
+          class="form-input w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-100 placeholder-zinc-500 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 focus:outline-none transition-colors"
+          placeholder="Enter your username or email"
+        />
+      </div>
+
+      <div>
+        <label for="password" class="block text-sm font-medium text-zinc-300 mb-2">
+          Password
+        </label>
+        <input
+          type="password"
+          id="password"
+          name="password"
+          required
+          class="form-input w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-100 placeholder-zinc-500 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 focus:outline-none transition-colors"
+          placeholder="Enter your password"
+        />
+      </div>
+
+      <div id="form-error" class="hidden error-message bg-red-900/50 border border-red-700 text-red-200 px-4 py-3 rounded-lg text-sm"></div>
+
+      <button
+        type="submit"
+        class="btn-primary w-full py-3 px-4 bg-cyan-600 hover:bg-cyan-500 text-white font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:ring-offset-2 focus:ring-offset-zinc-900"
+      >
+        Login
+      </button>
+    </form>
+
+    <div class="mt-6 text-center space-y-2">
+      <p class="text-zinc-400 text-sm">
+        Don't have an account?
+        <a href="/signup" class="text-cyan-400 hover:text-cyan-300 transition-colors">Sign up</a>
+      </p>
+      <p class="text-zinc-400 text-sm">
+        <a href="/forgot-password" class="text-cyan-400 hover:text-cyan-300 transition-colors">Forgot password?</a>
+      </p>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.getElementById('login-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const errorDiv = document.getElementById('form-error');
+    errorDiv.classList.add('hidden');
+
+    const formData = {
+      username_or_email: document.getElementById('username_or_email').value,
+      password: document.getElementById('password').value
+    };
+
+    try {
+      const response = await fetch('/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(formData)
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        window.location.href = '/';
+      } else {
+        errorDiv.textContent = data.error || 'Login failed. Please try again.';
+        errorDiv.classList.remove('hidden');
+      }
+    } catch (error) {
+      errorDiv.textContent = 'An error occurred. Please try again.';
+      errorDiv.classList.remove('hidden');
+    }
+  });
+</script>
+{{ end }}

@@ -1,0 +1,287 @@
+{{ template "base" . }}
+
+{{ define "content" }}
+<div class="w-full max-w-2xl">
+  <h1 class="text-3xl font-bold text-zinc-100 mb-8">Settings</h1>
+
+  <!-- Profile Section -->
+  <div class="settings-section bg-zinc-900 rounded-xl shadow-xl border border-zinc-800 p-6 mb-6">
+    <h2 class="text-xl font-semibold text-zinc-100 mb-4">Profile</h2>
+
+    <form id="profile-form" class="space-y-4">
+      <div>
+        <label for="username" class="block text-sm font-medium text-zinc-300 mb-2">
+          Username
+        </label>
+        <input
+          type="text"
+          id="username"
+          name="username"
+          value="{{ .user.Username }}"
+          required
+          minlength="3"
+          maxlength="50"
+          class="form-input w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-100 placeholder-zinc-500 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 focus:outline-none transition-colors"
+        />
+      </div>
+
+      <div>
+        <label for="email" class="block text-sm font-medium text-zinc-300 mb-2">
+          Email
+        </label>
+        <input
+          type="email"
+          id="email"
+          name="email"
+          value="{{ .user.Email }}"
+          required
+          class="form-input w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-100 placeholder-zinc-500 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 focus:outline-none transition-colors"
+        />
+      </div>
+
+      <div>
+        <label for="bio" class="block text-sm font-medium text-zinc-300 mb-2">
+          Bio
+        </label>
+        <textarea
+          id="bio"
+          name="bio"
+          rows="3"
+          maxlength="500"
+          class="form-input w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-100 placeholder-zinc-500 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 focus:outline-none transition-colors resize-none"
+          placeholder="Tell us about yourself..."
+        >{{ .user.Bio }}</textarea>
+        <p class="text-zinc-500 text-xs mt-1">Max 500 characters</p>
+      </div>
+
+      <div id="profile-error" class="hidden error-message bg-red-900/50 border border-red-700 text-red-200 px-4 py-3 rounded-lg text-sm"></div>
+      <div id="profile-success" class="hidden success-message bg-green-900/50 border border-green-700 text-green-200 px-4 py-3 rounded-lg text-sm"></div>
+
+      <button
+        type="submit"
+        class="btn-primary py-2 px-6 bg-cyan-600 hover:bg-cyan-500 text-white font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:ring-offset-2 focus:ring-offset-zinc-900"
+      >
+        Save Profile
+      </button>
+    </form>
+  </div>
+
+  <!-- Password Section -->
+  <div class="settings-section bg-zinc-900 rounded-xl shadow-xl border border-zinc-800 p-6 mb-6">
+    <h2 class="text-xl font-semibold text-zinc-100 mb-4">Change Password</h2>
+
+    <form id="password-form" class="space-y-4">
+      <div>
+        <label for="current_password" class="block text-sm font-medium text-zinc-300 mb-2">
+          Current Password
+        </label>
+        <input
+          type="password"
+          id="current_password"
+          name="current_password"
+          required
+          class="form-input w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-100 placeholder-zinc-500 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 focus:outline-none transition-colors"
+          placeholder="Enter your current password"
+        />
+      </div>
+
+      <div>
+        <label for="new_password" class="block text-sm font-medium text-zinc-300 mb-2">
+          New Password
+        </label>
+        <input
+          type="password"
+          id="new_password"
+          name="new_password"
+          required
+          minlength="8"
+          class="form-input w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-100 placeholder-zinc-500 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 focus:outline-none transition-colors"
+          placeholder="Enter your new password"
+        />
+        <p class="text-zinc-500 text-xs mt-1">Must be at least 8 characters</p>
+      </div>
+
+      <div>
+        <label for="confirm_new_password" class="block text-sm font-medium text-zinc-300 mb-2">
+          Confirm New Password
+        </label>
+        <input
+          type="password"
+          id="confirm_new_password"
+          name="confirm_new_password"
+          required
+          class="form-input w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-100 placeholder-zinc-500 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 focus:outline-none transition-colors"
+          placeholder="Confirm your new password"
+        />
+      </div>
+
+      <div id="password-error" class="hidden error-message bg-red-900/50 border border-red-700 text-red-200 px-4 py-3 rounded-lg text-sm"></div>
+      <div id="password-success" class="hidden success-message bg-green-900/50 border border-green-700 text-green-200 px-4 py-3 rounded-lg text-sm"></div>
+
+      <button
+        type="submit"
+        class="btn-primary py-2 px-6 bg-cyan-600 hover:bg-cyan-500 text-white font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:ring-offset-2 focus:ring-offset-zinc-900"
+      >
+        Change Password
+      </button>
+    </form>
+  </div>
+
+  <!-- Privacy Section -->
+  <div class="settings-section bg-zinc-900 rounded-xl shadow-xl border border-zinc-800 p-6">
+    <h2 class="text-xl font-semibold text-zinc-100 mb-4">Privacy</h2>
+
+    <form id="privacy-form" class="space-y-4">
+      <div class="flex items-center justify-between py-3">
+        <div>
+          <p class="text-zinc-100 font-medium">Public Profile</p>
+          <p class="text-zinc-500 text-sm">Allow others to see your profile</p>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" id="profile_public" {{ if .user.PrivacySettings.ProfilePublic }}checked{{ end }} />
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+
+      <div class="flex items-center justify-between py-3 border-t border-zinc-800">
+        <div>
+          <p class="text-zinc-100 font-medium">Public Quotes</p>
+          <p class="text-zinc-500 text-sm">Allow others to see your quotes</p>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" id="quotes_public" {{ if .user.PrivacySettings.QuotesPublic }}checked{{ end }} />
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+
+      <div id="privacy-error" class="hidden error-message bg-red-900/50 border border-red-700 text-red-200 px-4 py-3 rounded-lg text-sm"></div>
+      <div id="privacy-success" class="hidden success-message bg-green-900/50 border border-green-700 text-green-200 px-4 py-3 rounded-lg text-sm"></div>
+
+      <button
+        type="submit"
+        class="btn-primary py-2 px-6 bg-cyan-600 hover:bg-cyan-500 text-white font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:ring-offset-2 focus:ring-offset-zinc-900"
+      >
+        Save Privacy Settings
+      </button>
+    </form>
+  </div>
+</div>
+
+<script>
+  // Profile form handler
+  document.getElementById('profile-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const errorDiv = document.getElementById('profile-error');
+    const successDiv = document.getElementById('profile-success');
+    errorDiv.classList.add('hidden');
+    successDiv.classList.add('hidden');
+
+    const formData = {
+      username: document.getElementById('username').value,
+      email: document.getElementById('email').value,
+      bio: document.getElementById('bio').value
+    };
+
+    try {
+      const response = await fetch('/api/user/profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        successDiv.textContent = 'Profile updated successfully!';
+        successDiv.classList.remove('hidden');
+      } else {
+        errorDiv.textContent = data.error || 'Failed to update profile.';
+        errorDiv.classList.remove('hidden');
+      }
+    } catch (error) {
+      errorDiv.textContent = 'An error occurred. Please try again.';
+      errorDiv.classList.remove('hidden');
+    }
+  });
+
+  // Password form handler
+  document.getElementById('password-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const errorDiv = document.getElementById('password-error');
+    const successDiv = document.getElementById('password-success');
+    errorDiv.classList.add('hidden');
+    successDiv.classList.add('hidden');
+
+    const newPassword = document.getElementById('new_password').value;
+    const confirmPassword = document.getElementById('confirm_new_password').value;
+
+    if (newPassword !== confirmPassword) {
+      errorDiv.textContent = 'New passwords do not match.';
+      errorDiv.classList.remove('hidden');
+      return;
+    }
+
+    const formData = {
+      current_password: document.getElementById('current_password').value,
+      new_password: newPassword
+    };
+
+    try {
+      const response = await fetch('/api/user/password', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        successDiv.textContent = 'Password changed successfully!';
+        successDiv.classList.remove('hidden');
+        document.getElementById('password-form').reset();
+      } else {
+        errorDiv.textContent = data.error || 'Failed to change password.';
+        errorDiv.classList.remove('hidden');
+      }
+    } catch (error) {
+      errorDiv.textContent = 'An error occurred. Please try again.';
+      errorDiv.classList.remove('hidden');
+    }
+  });
+
+  // Privacy form handler
+  document.getElementById('privacy-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const errorDiv = document.getElementById('privacy-error');
+    const successDiv = document.getElementById('privacy-success');
+    errorDiv.classList.add('hidden');
+    successDiv.classList.add('hidden');
+
+    const formData = {
+      profile_public: document.getElementById('profile_public').checked,
+      quotes_public: document.getElementById('quotes_public').checked
+    };
+
+    try {
+      const response = await fetch('/api/user/privacy', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        successDiv.textContent = 'Privacy settings updated!';
+        successDiv.classList.remove('hidden');
+      } else {
+        errorDiv.textContent = data.error || 'Failed to update privacy settings.';
+        errorDiv.classList.remove('hidden');
+      }
+    } catch (error) {
+      errorDiv.textContent = 'An error occurred. Please try again.';
+      errorDiv.classList.remove('hidden');
+    }
+  });
+</script>
+{{ end }}

@@ -1,12 +1,24 @@
 @import "tailwindcss";
 
 @source "../index.html";
+@source "../templates/*.html";
+
+/* ===== Shimmer Animation ===== */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
 
 /* Quote Card Container */
 .quote-card {
   perspective: 1000px;
   cursor: pointer;
   transition: transform 0.3s ease;
+  position: relative;
 }
 
 .quote-card:hover {
@@ -44,6 +56,38 @@
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+}
+
+/* Shimmer overlay */
+.card-front::before,
+.card-back::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    120deg,
+    transparent 0%,
+    transparent 40%,
+    rgba(6, 182, 212, 0.04) 50%,
+    transparent 60%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+  border-radius: inherit;
+  z-index: 10;
+}
+
+.quote-card:hover .card-front::before,
+.quote-card:hover .card-back::before {
+  opacity: 1;
+  animation: shimmer 2.5s ease-in-out infinite alternate;
 }
 
 /* Expand faces on hover */
@@ -72,6 +116,8 @@
 .card-content {
   flex: 1;
   overflow: hidden;
+  position: relative;
+  z-index: 1;
 }
 
 .quote-card:hover .card-content {
@@ -110,11 +156,250 @@
 .card-footer {
   flex-shrink: 0;
   margin-top: auto;
+  position: relative;
+  z-index: 1;
 }
 
-/* Smooth shadow on hover */
+/* Elevated shadow and glow on hover */
 .quote-card:hover .card-front,
 .quote-card:hover .card-back {
-  box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.4),
-              0 0 20px rgba(251, 191, 36, 0.1);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6),
+              0 0 30px rgba(6, 182, 212, 0.15),
+              inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+/* Accent border glow on hover */
+.quote-card:hover .card-front {
+  border-color: rgba(6, 182, 212, 0.3);
+}
+
+.quote-card:hover .card-back {
+  border-color: rgba(6, 182, 212, 0.2);
+}
+
+/* Tag hover effect */
+.tag-pill {
+  transition: all 0.2s ease;
+}
+
+.tag-pill:hover {
+  background-color: rgba(6, 182, 212, 0.2);
+  border-color: rgba(6, 182, 212, 0.4);
+  color: rgb(6, 182, 212);
+}
+
+/* ===== Header Styles ===== */
+
+/* Logo with gradient and glow */
+.logo-text {
+  background: linear-gradient(135deg, #fff 0%, #06b6d4 50%, #fff 100%);
+  background-size: 200% 200%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: logo-shimmer 4s ease-in-out infinite alternate;
+  text-shadow: 0 0 30px rgba(6, 182, 212, 0.3);
+  filter: drop-shadow(0 0 10px rgba(6, 182, 212, 0.2));
+}
+
+@keyframes logo-shimmer {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 100% 50%;
+  }
+}
+
+.logo-text:hover {
+  animation: logo-shimmer 1.5s ease-in-out infinite alternate;
+  filter: drop-shadow(0 0 20px rgba(6, 182, 212, 0.4));
+}
+
+/* Hamburger menu animation */
+.hamburger-btn.active .hamburger-line:nth-child(1) {
+  transform: rotate(45deg) translate(4px, 4px);
+  background-color: rgb(6, 182, 212);
+}
+
+.hamburger-btn.active .hamburger-line:nth-child(2) {
+  opacity: 0;
+  transform: scaleX(0);
+}
+
+.hamburger-btn.active .hamburger-line:nth-child(3) {
+  transform: rotate(-45deg) translate(4px, -4px);
+  background-color: rgb(6, 182, 212);
+}
+
+/* Navigation menu slide */
+.nav-menu.open {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+/* Search bar expansion */
+.search-input {
+  width: 0;
+  padding: 0;
+  opacity: 0;
+  border-width: 0;
+}
+
+.search-container.expanded .search-input {
+  width: 200px;
+  padding: 8px 12px;
+  opacity: 1;
+  border-width: 1px;
+  margin-right: 4px;
+}
+
+.search-container.expanded .search-btn svg {
+  color: rgb(6, 182, 212);
+}
+
+/* ===== Logo Link ===== */
+.logo-link {
+  text-decoration: none;
+}
+
+.logo-link:hover .logo-text {
+  animation: logo-shimmer 1.5s ease-in-out infinite alternate;
+  filter: drop-shadow(0 0 20px rgba(6, 182, 212, 0.4));
+}
+
+/* ===== Auth Card Styles ===== */
+.auth-card {
+  animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ===== Form Input Styles ===== */
+.form-input {
+  transition: all 0.2s ease;
+}
+
+.form-input:focus {
+  box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.1);
+}
+
+.form-input::placeholder {
+  color: rgb(113, 113, 122);
+}
+
+/* ===== Button Styles ===== */
+.btn-primary {
+  transition: all 0.2s ease;
+}
+
+.btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(6, 182, 212, 0.3);
+}
+
+.btn-primary:active {
+  transform: translateY(0);
+}
+
+.btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* ===== Toggle Switch Styles ===== */
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 48px;
+  height: 26px;
+  flex-shrink: 0;
+}
+
+.toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgb(63, 63, 70);
+  border-radius: 26px;
+  transition: all 0.3s ease;
+}
+
+.toggle-slider::before {
+  position: absolute;
+  content: "";
+  height: 20px;
+  width: 20px;
+  left: 3px;
+  bottom: 3px;
+  background-color: rgb(161, 161, 170);
+  border-radius: 50%;
+  transition: all 0.3s ease;
+}
+
+.toggle-switch input:checked + .toggle-slider {
+  background-color: rgb(6, 182, 212);
+}
+
+.toggle-switch input:checked + .toggle-slider::before {
+  transform: translateX(22px);
+  background-color: white;
+}
+
+.toggle-switch input:focus + .toggle-slider {
+  box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.2);
+}
+
+/* ===== Settings Section Styles ===== */
+.settings-section {
+  transition: all 0.2s ease;
+}
+
+.settings-section:hover {
+  border-color: rgba(6, 182, 212, 0.2);
+}
+
+/* ===== Profile Header Styles ===== */
+.profile-header {
+  transition: all 0.2s ease;
+}
+
+.profile-header:hover {
+  border-color: rgba(6, 182, 212, 0.2);
+}
+
+/* ===== Message Styles ===== */
+.error-message {
+  animation: shake 0.3s ease;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
+}
+
+.success-message {
+  animation: fadeIn 0.3s ease-out;
 }

@@ -32,6 +32,23 @@ func UnmarshalQuotes(data []byte) (models.Quotes, error) {
 	return q, err
 }
 
+// getUserFromSession retrieves the user from session if logged in
+func getUserFromSession(c *gin.Context, db *database.DBConnection) map[string]interface{} {
+	session := sessions.Default(c)
+	userID := session.Get("user_id")
+
+	if userID == nil {
+		return nil
+	}
+
+	user, err := database.GetUserByID(db.DB, userID.(int))
+	if err != nil {
+		return nil
+	}
+
+	return user.ToResponse()
+}
+
 func setupRouter(dbConn *database.DBConnection) *gin.Engine {
 	r := gin.Default()
 
@@ -56,11 +73,11 @@ func setupRouter(dbConn *database.DBConnection) *gin.Engine {
 
 	r.Use(sessions.Sessions("zetl_session", store))
 
-	// HTML template
-	r.LoadHTMLFiles("../client/index.html")
+	// HTML templates - load from templates directory
+	r.LoadHTMLGlob("../client/templates/*.html")
 	r.Static("/css", "../client/css")
 
-	// Public routes
+	// Public page routes
 	r.GET("/", func(c *gin.Context) {
 		// Fetch quotes from database as JSON and unmarshal
 		quotesJSON := database.FetchQuotesAsJson(dbConn.DB)
@@ -69,8 +86,14 @@ func setupRouter(dbConn *database.DBConnection) *gin.Engine {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load quotes"})
 			return
 		}
-		c.HTML(http.StatusOK, "index.html", gin.H{"items": quotes})
+		user := getUserFromSession(c, dbConn)
+		c.HTML(http.StatusOK, "index.html", gin.H{"items": quotes, "user": user})
 	})
+
+	r.GET("/login", handlers.LoginPageHandler(dbConn.DB))
+	r.GET("/signup", handlers.SignupPageHandler(dbConn.DB))
+	r.GET("/forgot-password", handlers.ForgotPasswordPageHandler(dbConn.DB))
+	r.GET("/reset-password", handlers.ResetPasswordPageHandler(dbConn.DB))
 
 	// Public API routes
 	r.GET("/user/:id/quotes", handlers.GetUserQuotesHandler(dbConn.DB))
@@ -81,14 +104,25 @@ func setupRouter(dbConn *database.DBConnection) *gin.Engine {
 		authGroup.POST("/signup", handlers.SignupHandler(dbConn.DB))
 		authGroup.POST("/login", handlers.LoginHandler(dbConn.DB))
 		authGroup.POST("/logout", handlers.LogoutHandler())
+		authGroup.POST("/forgot-password", handlers.ForgotPasswordHandler(dbConn.DB))
+		authGroup.POST("/reset-password", handlers.ResetPasswordHandler(dbConn.DB))
 	}
 
-	// Protected routes - require authentication
+	// Protected page routes - require authentication
+	r.GET("/settings", middleware.AuthRequired(), handlers.SettingsPageHandler(dbConn.DB))
+	r.GET("/profile", middleware.AuthRequired(), handlers.ProfilePageHandler(dbConn.DB))
+
+	// Protected API routes - require authentication
 	apiGroup := r.Group("/api")
 	apiGroup.Use(middleware.AuthRequired())
 	{
 		// Get current user
 		apiGroup.GET("/user", handlers.GetCurrentUserHandler(dbConn.DB))
+
+		// User settings
+		apiGroup.PUT("/user/profile", handlers.UpdateProfileHandler(dbConn.DB))
+		apiGroup.PUT("/user/password", handlers.UpdatePasswordHandler(dbConn.DB))
+		apiGroup.PUT("/user/privacy", handlers.UpdatePrivacyHandler(dbConn.DB))
 
 		// Quote creation
 		apiGroup.POST("/quote", handlers.CreateQuoteHandler(dbConn.DB))

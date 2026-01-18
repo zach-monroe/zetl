@@ -1,17 +1,17 @@
-{{ block "index" . }}
+{{ define "base" }}
 <!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>zetl</title>
+    <title>{{ if .title }}{{ .title }} - {{ end }}zetl</title>
     <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.8/dist/htmx.min.js"></script>
     <link href='/css/style.css' rel="stylesheet">
   </head>
   <body class="bg-zinc-950 min-h-screen font-serif">
     <div class="flex items-center flex-col py-8 px-4">
       {{ template "header" . }}
-      {{ template "cards" . }}
+      {{ template "content" . }}
     </div>
   </body>
 </html>
@@ -34,6 +34,8 @@
       <!-- Slide-out Menu -->
       <nav id="nav-menu" class="nav-menu absolute left-0 top-full mt-2 bg-zinc-900 border border-zinc-800 rounded-xl shadow-xl shadow-black/50 opacity-0 invisible translate-y-[-10px] transition-all duration-300 z-50 min-w-[180px]">
         <ul class="py-2">
+          {{ if .user }}
+          <!-- Authenticated menu items -->
           <li>
             <a href="#" class="nav-item flex items-center gap-3 px-4 py-3 text-zinc-300 hover:text-cyan-400 hover:bg-zinc-800/50 transition-all duration-200">
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -43,15 +45,15 @@
             </a>
           </li>
           <li>
-            <a href="#" class="nav-item flex items-center gap-3 px-4 py-3 text-zinc-300 hover:text-cyan-400 hover:bg-zinc-800/50 transition-all duration-200">
+            <a href="/profile" class="nav-item flex items-center gap-3 px-4 py-3 text-zinc-300 hover:text-cyan-400 hover:bg-zinc-800/50 transition-all duration-200">
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4.5 12.75l6 6 9-13.5"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z"/>
               </svg>
-              <span class="text-sm font-medium">Collections</span>
+              <span class="text-sm font-medium">My Profile</span>
             </a>
           </li>
           <li>
-            <a href="#" class="nav-item flex items-center gap-3 px-4 py-3 text-zinc-300 hover:text-cyan-400 hover:bg-zinc-800/50 transition-all duration-200">
+            <a href="/settings" class="nav-item flex items-center gap-3 px-4 py-3 text-zinc-300 hover:text-cyan-400 hover:bg-zinc-800/50 transition-all duration-200">
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 010 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 010-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28z"/>
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
@@ -59,14 +61,43 @@
               <span class="text-sm font-medium">Settings</span>
             </a>
           </li>
+          <li class="border-t border-zinc-800 mt-2 pt-2">
+            <a href="#" onclick="logout()" class="nav-item flex items-center gap-3 px-4 py-3 text-zinc-300 hover:text-red-400 hover:bg-zinc-800/50 transition-all duration-200">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75"/>
+              </svg>
+              <span class="text-sm font-medium">Logout</span>
+            </a>
+          </li>
+          {{ else }}
+          <!-- Unauthenticated menu items -->
+          <li>
+            <a href="/login" class="nav-item flex items-center gap-3 px-4 py-3 text-zinc-300 hover:text-cyan-400 hover:bg-zinc-800/50 transition-all duration-200">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9"/>
+              </svg>
+              <span class="text-sm font-medium">Login</span>
+            </a>
+          </li>
+          <li>
+            <a href="/signup" class="nav-item flex items-center gap-3 px-4 py-3 text-zinc-300 hover:text-cyan-400 hover:bg-zinc-800/50 transition-all duration-200">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zM4 19.235v-.11a6.375 6.375 0 0112.75 0v.109A12.318 12.318 0 0110.374 21c-2.331 0-4.512-.645-6.374-1.766z"/>
+              </svg>
+              <span class="text-sm font-medium">Sign Up</span>
+            </a>
+          </li>
+          {{ end }}
         </ul>
       </nav>
     </div>
 
-    <!-- Center Logo -->
-    <h1 class="logo-text text-4xl font-bold font-sans tracking-tight cursor-default select-none">
-      zetl
-    </h1>
+    <!-- Center Logo (clickable) -->
+    <a href="/" class="logo-link">
+      <h1 class="logo-text text-4xl font-bold font-sans tracking-tight select-none">
+        zetl
+      </h1>
+    </a>
 
     <!-- Search (Right) -->
     <div class="relative flex items-center">
@@ -122,87 +153,22 @@
       searchContainer.classList.remove('expanded');
     }
   });
+
+  // Logout function
+  async function logout() {
+    try {
+      const response = await fetch('/auth/logout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      if (response.ok) {
+        window.location.href = '/';
+      }
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
+  }
 </script>
-{{ end }}
-
-{{ define "cards" }}
-<div class="w-full max-w-7xl">
-  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-    {{ template "items" . }}
-  </div>
-</div>
-{{ end }}
-
-{{ define "items" }}
-{{ range .items }}
-<div class="quote-card group" onclick="this.classList.toggle('flipped')">
-  <div class="card-inner">
-    <!-- Front of card -->
-    <div class="card-front bg-zinc-900 rounded-xl shadow-lg border border-zinc-800">
-      <!-- Content -->
-      <div class="card-content p-6">
-        <p class="text-zinc-200 text-lg leading-relaxed quote-text">
-          "{{ .Quote }}"
-        </p>
-      </div>
-      <!-- Footer -->
-      <div class="card-footer px-6 py-3 border-t border-zinc-800">
-        <div class="flex justify-between items-center">
-          <div>
-            <p class="text-cyan-400 font-medium text-sm">{{ .Author }}</p>
-            {{ if .Book }}
-            <p class="text-zinc-500 text-xs italic">{{ .Book }}</p>
-            {{ end }}
-          </div>
-          <span class="text-zinc-600 text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-            Flip
-          </span>
-        </div>
-      </div>
-    </div>
-
-    <!-- Back of card -->
-    <div class="card-back bg-zinc-900 rounded-xl shadow-lg border border-zinc-800">
-      <!-- Content -->
-      <div class="card-content p-6">
-        <!-- Tags -->
-        <div class="mb-4">
-          <h4 class="text-cyan-400 text-xs font-semibold uppercase tracking-wider mb-3">Tags</h4>
-          <div class="flex flex-wrap gap-2">
-            {{ range .Tags }}
-            <span class="tag-pill bg-zinc-800 text-zinc-300 px-3 py-1 rounded-full text-xs font-medium border border-zinc-700">
-              {{ . }}
-            </span>
-            {{ else }}
-            <span class="text-zinc-600 text-sm italic">No tags</span>
-            {{ end }}
-          </div>
-        </div>
-
-        <!-- Notes -->
-        <div>
-          <h4 class="text-cyan-400 text-xs font-semibold uppercase tracking-wider mb-3">Notes</h4>
-          {{ if .Notes }}
-          <p class="text-zinc-400 text-sm leading-relaxed notes-text">{{ .Notes }}</p>
-          {{ else }}
-          <p class="text-zinc-600 text-sm italic">No notes added</p>
-          {{ end }}
-        </div>
-      </div>
-      <!-- Footer -->
-      <div class="card-footer px-6 py-3 border-t border-zinc-800">
-        <div class="flex justify-between items-center">
-          <div>
-            <p class="text-zinc-500 text-xs truncate max-w-[180px]">"{{ .Quote }}"</p>
-            <p class="text-cyan-400/70 text-xs">- {{ .Author }}</p>
-          </div>
-          <span class="text-zinc-600 text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-            Flip
-          </span>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-{{ end }}
 {{ end }}
