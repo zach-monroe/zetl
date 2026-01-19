@@ -1,138 +1,151 @@
-{{ template "base" . }}
+{{ define "signup.html" }}
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Sign Up - zetl</title>
+    <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.8/dist/htmx.min.js"></script>
+    <link href='/css/style.css' rel="stylesheet">
+  </head>
+  <body class="bg-zinc-950 min-h-screen font-serif">
+    <div class="flex items-center flex-col py-8 px-4">
+      {{ template "header" . }}
+      <div class="w-full max-w-md">
+        <div class="auth-card bg-zinc-900 rounded-xl shadow-xl border border-zinc-800 p-8">
+          <h2 class="text-2xl font-bold text-zinc-100 mb-6 text-center">Create Account</h2>
 
-{{ define "content" }}
-<div class="w-full max-w-md">
-  <div class="auth-card bg-zinc-900 rounded-xl shadow-xl border border-zinc-800 p-8">
-    <h2 class="text-2xl font-bold text-zinc-100 mb-6 text-center">Create Account</h2>
+          {{ if .error }}
+          <div class="error-message bg-red-900/50 border border-red-700 text-red-200 px-4 py-3 rounded-lg mb-6 text-sm">
+            {{ .error }}
+          </div>
+          {{ end }}
 
-    {{ if .error }}
-    <div class="error-message bg-red-900/50 border border-red-700 text-red-200 px-4 py-3 rounded-lg mb-6 text-sm">
-      {{ .error }}
+          <form id="signup-form" class="space-y-5">
+            <div>
+              <label for="username" class="block text-sm font-medium text-zinc-300 mb-2">
+                Username
+              </label>
+              <input
+                type="text"
+                id="username"
+                name="username"
+                required
+                minlength="3"
+                maxlength="50"
+                class="form-input w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-100 placeholder-zinc-500 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 focus:outline-none transition-colors"
+                placeholder="Choose a username"
+              />
+            </div>
+
+            <div>
+              <label for="email" class="block text-sm font-medium text-zinc-300 mb-2">
+                Email
+              </label>
+              <input
+                type="email"
+                id="email"
+                name="email"
+                required
+                class="form-input w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-100 placeholder-zinc-500 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 focus:outline-none transition-colors"
+                placeholder="Enter your email"
+              />
+            </div>
+
+            <div>
+              <label for="password" class="block text-sm font-medium text-zinc-300 mb-2">
+                Password
+              </label>
+              <input
+                type="password"
+                id="password"
+                name="password"
+                required
+                minlength="8"
+                class="form-input w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-100 placeholder-zinc-500 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 focus:outline-none transition-colors"
+                placeholder="Create a password"
+              />
+              <p class="text-zinc-500 text-xs mt-2">Must be at least 8 characters</p>
+            </div>
+
+            <div>
+              <label for="confirm_password" class="block text-sm font-medium text-zinc-300 mb-2">
+                Confirm Password
+              </label>
+              <input
+                type="password"
+                id="confirm_password"
+                name="confirm_password"
+                required
+                class="form-input w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-100 placeholder-zinc-500 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 focus:outline-none transition-colors"
+                placeholder="Confirm your password"
+              />
+            </div>
+
+            <div id="form-error" class="hidden error-message bg-red-900/50 border border-red-700 text-red-200 px-4 py-3 rounded-lg text-sm"></div>
+
+            <button
+              type="submit"
+              class="btn-primary w-full py-3 px-4 bg-cyan-600 hover:bg-cyan-500 text-white font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:ring-offset-2 focus:ring-offset-zinc-900"
+            >
+              Sign Up
+            </button>
+          </form>
+
+          <div class="mt-6 text-center">
+            <p class="text-zinc-400 text-sm">
+              Already have an account?
+              <a href="/login" class="text-cyan-400 hover:text-cyan-300 transition-colors">Login</a>
+            </p>
+          </div>
+        </div>
+      </div>
     </div>
-    {{ end }}
+    {{ template "header-scripts" . }}
+    <script>
+      document.getElementById('signup-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const errorDiv = document.getElementById('form-error');
+        errorDiv.classList.add('hidden');
 
-    <form id="signup-form" class="space-y-5">
-      <div>
-        <label for="username" class="block text-sm font-medium text-zinc-300 mb-2">
-          Username
-        </label>
-        <input
-          type="text"
-          id="username"
-          name="username"
-          required
-          minlength="3"
-          maxlength="50"
-          class="form-input w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-100 placeholder-zinc-500 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 focus:outline-none transition-colors"
-          placeholder="Choose a username"
-        />
-      </div>
+        const password = document.getElementById('password').value;
+        const confirmPassword = document.getElementById('confirm_password').value;
 
-      <div>
-        <label for="email" class="block text-sm font-medium text-zinc-300 mb-2">
-          Email
-        </label>
-        <input
-          type="email"
-          id="email"
-          name="email"
-          required
-          class="form-input w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-100 placeholder-zinc-500 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 focus:outline-none transition-colors"
-          placeholder="Enter your email"
-        />
-      </div>
+        if (password !== confirmPassword) {
+          errorDiv.textContent = 'Passwords do not match.';
+          errorDiv.classList.remove('hidden');
+          return;
+        }
 
-      <div>
-        <label for="password" class="block text-sm font-medium text-zinc-300 mb-2">
-          Password
-        </label>
-        <input
-          type="password"
-          id="password"
-          name="password"
-          required
-          minlength="8"
-          class="form-input w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-100 placeholder-zinc-500 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 focus:outline-none transition-colors"
-          placeholder="Create a password"
-        />
-        <p class="text-zinc-500 text-xs mt-2">Must be at least 8 characters</p>
-      </div>
+        const formData = {
+          username: document.getElementById('username').value,
+          email: document.getElementById('email').value,
+          password: password
+        };
 
-      <div>
-        <label for="confirm_password" class="block text-sm font-medium text-zinc-300 mb-2">
-          Confirm Password
-        </label>
-        <input
-          type="password"
-          id="confirm_password"
-          name="confirm_password"
-          required
-          class="form-input w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-100 placeholder-zinc-500 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 focus:outline-none transition-colors"
-          placeholder="Confirm your password"
-        />
-      </div>
+        try {
+          const response = await fetch('/auth/signup', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(formData)
+          });
 
-      <div id="form-error" class="hidden error-message bg-red-900/50 border border-red-700 text-red-200 px-4 py-3 rounded-lg text-sm"></div>
+          const data = await response.json();
 
-      <button
-        type="submit"
-        class="btn-primary w-full py-3 px-4 bg-cyan-600 hover:bg-cyan-500 text-white font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:ring-offset-2 focus:ring-offset-zinc-900"
-      >
-        Sign Up
-      </button>
-    </form>
-
-    <div class="mt-6 text-center">
-      <p class="text-zinc-400 text-sm">
-        Already have an account?
-        <a href="/login" class="text-cyan-400 hover:text-cyan-300 transition-colors">Login</a>
-      </p>
-    </div>
-  </div>
-</div>
-
-<script>
-  document.getElementById('signup-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const errorDiv = document.getElementById('form-error');
-    errorDiv.classList.add('hidden');
-
-    const password = document.getElementById('password').value;
-    const confirmPassword = document.getElementById('confirm_password').value;
-
-    if (password !== confirmPassword) {
-      errorDiv.textContent = 'Passwords do not match.';
-      errorDiv.classList.remove('hidden');
-      return;
-    }
-
-    const formData = {
-      username: document.getElementById('username').value,
-      email: document.getElementById('email').value,
-      password: password
-    };
-
-    try {
-      const response = await fetch('/auth/signup', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(formData)
+          if (response.ok) {
+            window.location.href = '/';
+          } else {
+            errorDiv.textContent = data.error || 'Signup failed. Please try again.';
+            errorDiv.classList.remove('hidden');
+          }
+        } catch (error) {
+          errorDiv.textContent = 'An error occurred. Please try again.';
+          errorDiv.classList.remove('hidden');
+        }
       });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        window.location.href = '/';
-      } else {
-        errorDiv.textContent = data.error || 'Signup failed. Please try again.';
-        errorDiv.classList.remove('hidden');
-      }
-    } catch (error) {
-      errorDiv.textContent = 'An error occurred. Please try again.';
-      errorDiv.classList.remove('hidden');
-    }
-  });
-</script>
+    </script>
+  </body>
+</html>
 {{ end }}

@@ -1,22 +1,3 @@
-{{ define "base" }}
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{{ if .title }}{{ .title }} - {{ end }}zetl</title>
-    <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.8/dist/htmx.min.js"></script>
-    <link href='/css/style.css' rel="stylesheet">
-  </head>
-  <body class="bg-zinc-950 min-h-screen font-serif">
-    <div class="flex items-center flex-col py-8 px-4">
-      {{ template "header" . }}
-      {{ template "content" . }}
-    </div>
-  </body>
-</html>
-{{ end }}
-
 {{ define "header" }}
 <header class="mb-12 w-full max-w-7xl">
   <div class="flex items-center justify-between px-2">
@@ -118,7 +99,9 @@
 
   </div>
 </header>
+{{ end }}
 
+{{ define "header-scripts" }}
 <script>
   // Hamburger menu toggle
   const menuToggle = document.getElementById('menu-toggle');
@@ -171,4 +154,78 @@
     }
   }
 </script>
+{{ end }}
+
+{{ define "quote-cards" }}
+{{ range .items }}
+<div class="quote-card group" onclick="this.classList.toggle('flipped')">
+  <div class="card-inner">
+    <!-- Front of card -->
+    <div class="card-front bg-zinc-900 rounded-xl shadow-lg border border-zinc-800">
+      <!-- Content -->
+      <div class="card-content p-6">
+        <p class="text-zinc-200 text-lg leading-relaxed quote-text">
+          "{{ .Quote }}"
+        </p>
+      </div>
+      <!-- Footer -->
+      <div class="card-footer px-6 py-3 border-t border-zinc-800">
+        <div class="flex justify-between items-center">
+          <div>
+            <p class="text-cyan-400 font-medium text-sm">{{ .Author }}</p>
+            {{ if .Book }}
+            <p class="text-zinc-500 text-xs italic">{{ .Book }}</p>
+            {{ end }}
+          </div>
+          <span class="text-zinc-600 text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+            Flip
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Back of card -->
+    <div class="card-back bg-zinc-900 rounded-xl shadow-lg border border-zinc-800">
+      <!-- Content -->
+      <div class="card-content p-6">
+        <!-- Tags -->
+        <div class="mb-4">
+          <h4 class="text-cyan-400 text-xs font-semibold uppercase tracking-wider mb-3">Tags</h4>
+          <div class="flex flex-wrap gap-2">
+            {{ range .Tags }}
+            <span class="tag-pill bg-zinc-800 text-zinc-300 px-3 py-1 rounded-full text-xs font-medium border border-zinc-700">
+              {{ . }}
+            </span>
+            {{ else }}
+            <span class="text-zinc-600 text-sm italic">No tags</span>
+            {{ end }}
+          </div>
+        </div>
+
+        <!-- Notes -->
+        <div>
+          <h4 class="text-cyan-400 text-xs font-semibold uppercase tracking-wider mb-3">Notes</h4>
+          {{ if .Notes }}
+          <p class="text-zinc-400 text-sm leading-relaxed notes-text">{{ .Notes }}</p>
+          {{ else }}
+          <p class="text-zinc-600 text-sm italic">No notes added</p>
+          {{ end }}
+        </div>
+      </div>
+      <!-- Footer -->
+      <div class="card-footer px-6 py-3 border-t border-zinc-800">
+        <div class="flex justify-between items-center">
+          <div>
+            <p class="text-zinc-500 text-xs truncate max-w-[180px]">"{{ .Quote }}"</p>
+            <p class="text-cyan-400/70 text-xs">- {{ .Author }}</p>
+          </div>
+          <span class="text-zinc-600 text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+            Flip
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{{ end }}
 {{ end }}
