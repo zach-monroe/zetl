@@ -486,11 +486,16 @@
 
       // Store card data for filtering
       const cardData = [];
+      const allTags = new Set();
+
       document.querySelectorAll('.quote-card').forEach(card => {
         const quoteText = card.querySelector('.quote-text')?.textContent?.trim() || '';
         const author = card.querySelector('.text-cyan-400')?.textContent?.trim() || '';
         const book = card.querySelector('.text-zinc-500.italic')?.textContent?.trim() || '';
         const tags = Array.from(card.querySelectorAll('.tag-pill')).map(t => t.textContent.trim().toLowerCase());
+
+        // Collect unique tags
+        tags.forEach(tag => allTags.add(tag));
 
         cardData.push({
           element: card,
@@ -500,6 +505,79 @@
           tags: tags
         });
       });
+
+      // Populate filter dropdown with all unique tags
+      function populateFilterDropdown() {
+        const tagList = document.getElementById('filter-tag-list');
+        if (!tagList) return;
+
+        if (allTags.size === 0) {
+          tagList.innerHTML = '<p class="text-zinc-500 text-sm italic">No tags available</p>';
+          return;
+        }
+
+        // Sort tags alphabetically
+        const sortedTags = Array.from(allTags).sort();
+
+        tagList.innerHTML = sortedTags.map(tag => `
+          <div class="filter-tag-item ${activeTagFilters.has(tag) ? 'selected' : ''}" data-tag="${escapeHtml(tag)}" onclick="toggleTagFromDropdown('${escapeHtml(tag)}')">
+            <div class="filter-tag-checkbox">
+              <svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
+              </svg>
+            </div>
+            <span class="text-zinc-300 text-sm">${escapeHtml(tag)}</span>
+          </div>
+        `).join('');
+      }
+
+      // Toggle tag from dropdown
+      function toggleTagFromDropdown(tag) {
+        const normalizedTag = tag.toLowerCase().trim();
+        if (activeTagFilters.has(normalizedTag)) {
+          activeTagFilters.delete(normalizedTag);
+        } else {
+          activeTagFilters.add(normalizedTag);
+        }
+        renderFilterChips();
+        updateFilterDropdown();
+        updateFilterBadge();
+        applyFilters();
+      }
+
+      // Update filter dropdown to reflect current selections
+      function updateFilterDropdown() {
+        const tagList = document.getElementById('filter-tag-list');
+        if (!tagList) return;
+
+        tagList.querySelectorAll('.filter-tag-item').forEach(item => {
+          const tag = item.dataset.tag;
+          if (activeTagFilters.has(tag)) {
+            item.classList.add('selected');
+          } else {
+            item.classList.remove('selected');
+          }
+        });
+      }
+
+      // Update filter badge count
+      function updateFilterBadge() {
+        const badge = document.getElementById('filter-badge');
+        if (!badge) return;
+
+        const count = activeTagFilters.size;
+        if (count > 0) {
+          badge.textContent = count;
+          badge.classList.remove('hidden');
+          badge.classList.add('flex');
+        } else {
+          badge.classList.add('hidden');
+          badge.classList.remove('flex');
+        }
+      }
+
+      // Initialize filter dropdown
+      populateFilterDropdown();
 
       // Search input handler
       searchInput.addEventListener('input', (e) => {
@@ -513,6 +591,8 @@
         if (!activeTagFilters.has(normalizedTag)) {
           activeTagFilters.add(normalizedTag);
           renderFilterChips();
+          updateFilterDropdown();
+          updateFilterBadge();
           applyFilters();
         }
       }
@@ -521,6 +601,8 @@
       function removeTagFilter(tag) {
         activeTagFilters.delete(tag);
         renderFilterChips();
+        updateFilterDropdown();
+        updateFilterBadge();
         applyFilters();
       }
 
@@ -530,6 +612,8 @@
         searchQuery = '';
         searchInput.value = '';
         renderFilterChips();
+        updateFilterDropdown();
+        updateFilterBadge();
         applyFilters();
       }
 
@@ -612,12 +696,33 @@
         return div.innerHTML;
       }
 
-      // Make addTagFilter available globally (for onclick handlers)
+      // Hide quote function (for non-owner cards)
+      function hideQuote(quoteId) {
+        const card = document.querySelector(`[data-quote-id="${quoteId}"]`);
+        if (card) {
+          // Animate out
+          card.style.transition = 'all 0.3s ease';
+          card.style.transform = 'scale(0.8)';
+          card.style.opacity = '0';
+          setTimeout(() => {
+            card.style.display = 'none';
+            // Also remove from cardData so it doesn't appear in filter results
+            const index = cardData.findIndex(c => c.element === card);
+            if (index > -1) {
+              cardData.splice(index, 1);
+            }
+          }, 300);
+        }
+      }
+
+      // Make functions available globally (for onclick handlers)
       window.addTagFilter = addTagFilter;
       window.removeTagFilter = removeTagFilter;
       window.clearAllFilters = clearAllFilters;
+      window.toggleTagFromDropdown = toggleTagFromDropdown;
       window.openAddModal = openAddModal;
       window.closeAddModal = closeAddModal;
+      window.hideQuote = hideQuote;
     </script>
   </body>
 </html>
