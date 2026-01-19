@@ -24,7 +24,7 @@
       </div>
 
       <div class="w-full max-w-7xl">
-        <div id="quotes-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <div id="quotes-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 items-start">
           {{ template "quote-cards" . }}
         </div>
         <!-- No Results Message -->
@@ -247,6 +247,179 @@
           });
         }
       });
+
+      // ===== Smooth Card Expansion Animation =====
+      const CARD_BASE_HEIGHT = 280;
+      const ANIMATION_DURATION = 500; // ms
+      const BOUNCE_EASING = 'cubic-bezier(0.34, 1.56, 0.64, 1)';
+
+      // Store original positions for FLIP animation
+      let cardPositions = new Map();
+
+      // Get all card positions
+      function captureCardPositions() {
+        const positions = new Map();
+        document.querySelectorAll('.quote-card').forEach(card => {
+          const rect = card.getBoundingClientRect();
+          positions.set(card, { top: rect.top, left: rect.left });
+        });
+        return positions;
+      }
+
+      // Animate cards from old positions to new positions (FLIP technique)
+      function animateCardsToNewPositions(oldPositions) {
+        document.querySelectorAll('.quote-card').forEach(card => {
+          const oldPos = oldPositions.get(card);
+          if (!oldPos) return;
+
+          const newRect = card.getBoundingClientRect();
+          const deltaY = oldPos.top - newRect.top;
+          const deltaX = oldPos.left - newRect.left;
+
+          // Skip if no movement
+          if (Math.abs(deltaY) < 1 && Math.abs(deltaX) < 1) return;
+
+          // Mark as animating to disable hover scale
+          card.classList.add('animating');
+
+          // Apply inverse transform to start from old position
+          card.style.transform = `translate(${deltaX}px, ${deltaY}px) scale(1)`;
+          card.style.transition = 'none';
+
+          // Force reflow
+          card.offsetHeight;
+
+          // Animate to new position
+          card.style.transition = `transform ${ANIMATION_DURATION}ms ${BOUNCE_EASING}`;
+          card.style.transform = '';
+
+          // Remove animating class after animation completes
+          setTimeout(() => {
+            card.classList.remove('animating');
+            card.style.transition = '';
+          }, ANIMATION_DURATION);
+        });
+      }
+
+      // Measure expanded height of a card
+      function measureExpandedHeight(card) {
+        const cardInner = card.querySelector('.card-inner');
+        const cardFront = card.querySelector('.card-front');
+        const cardBack = card.querySelector('.card-back');
+        const isFlipped = card.classList.contains('flipped');
+        const activeFace = isFlipped ? cardBack : cardFront;
+
+        // Store original styles
+        const originalInnerHeight = cardInner.style.height;
+        const originalFrontHeight = cardFront.style.height;
+        const originalBackHeight = cardBack.style.height;
+        const originalBackPosition = cardBack.style.position;
+
+        // Temporarily remove height constraints and make back face relative for measurement
+        cardInner.style.height = 'auto';
+        cardFront.style.height = 'auto';
+        cardBack.style.height = 'auto';
+
+        // Temporarily make the active face position relative to get accurate measurement
+        if (isFlipped) {
+          cardBack.style.position = 'relative';
+        }
+
+        // Measure the natural height of the active face
+        const expandedHeight = Math.max(activeFace.scrollHeight, CARD_BASE_HEIGHT);
+
+        // Restore original styles
+        cardInner.style.height = originalInnerHeight;
+        cardFront.style.height = originalFrontHeight;
+        cardBack.style.height = originalBackHeight;
+        if (isFlipped) {
+          cardBack.style.position = originalBackPosition;
+        }
+
+        return expandedHeight;
+      }
+
+      // Handle card expansion on hover
+      function initCardExpansion() {
+        document.querySelectorAll('.quote-card').forEach(card => {
+          const cardInner = card.querySelector('.card-inner');
+          const cardFront = card.querySelector('.card-front');
+          const cardBack = card.querySelector('.card-back');
+
+          let isExpanded = false;
+          let expandTimeout = null;
+
+          card.addEventListener('mouseenter', () => {
+            if (expandTimeout) clearTimeout(expandTimeout);
+
+            // Capture positions of all cards before expansion
+            const oldPositions = captureCardPositions();
+
+            // Measure what the expanded height should be
+            const expandedHeight = measureExpandedHeight(card);
+
+            // Set starting heights explicitly
+            cardInner.style.height = `${CARD_BASE_HEIGHT}px`;
+            cardFront.style.height = `${CARD_BASE_HEIGHT}px`;
+            // card-back uses CSS (top:0, bottom:0) to stretch with card-inner
+
+            // Force reflow
+            card.offsetHeight;
+
+            // Set up transitions
+            cardInner.style.transition = `height ${ANIMATION_DURATION}ms ${BOUNCE_EASING}`;
+            cardFront.style.transition = `height ${ANIMATION_DURATION}ms ${BOUNCE_EASING}`;
+
+            // Animate to expanded height
+            // card-front expansion creates the layout space
+            // card-back stretches automatically via CSS positioning
+            cardInner.style.height = `${expandedHeight}px`;
+            cardFront.style.height = `${expandedHeight}px`;
+
+            isExpanded = true;
+
+            // Animate other cards to their new positions
+            requestAnimationFrame(() => {
+              requestAnimationFrame(() => {
+                animateCardsToNewPositions(oldPositions);
+              });
+            });
+          });
+
+          card.addEventListener('mouseleave', () => {
+            expandTimeout = setTimeout(() => {
+              // Capture positions before collapse
+              const oldPositions = captureCardPositions();
+
+              // Animate back to base height
+              cardInner.style.height = `${CARD_BASE_HEIGHT}px`;
+              cardFront.style.height = `${CARD_BASE_HEIGHT}px`;
+
+              isExpanded = false;
+
+              // Animate other cards
+              requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                  animateCardsToNewPositions(oldPositions);
+                });
+              });
+
+              // Clean up explicit heights after animation
+              setTimeout(() => {
+                if (!isExpanded) {
+                  cardInner.style.height = '';
+                  cardFront.style.height = '';
+                  cardInner.style.transition = '';
+                  cardFront.style.transition = '';
+                }
+              }, ANIMATION_DURATION + 50);
+            }, 50); // Small delay to prevent flickering on quick mouse movements
+          });
+        });
+      }
+
+      // Initialize card expansion
+      initCardExpansion();
 
       // Check session validity
       async function checkSession() {
@@ -506,58 +679,191 @@
         });
       });
 
-      // Populate filter dropdown with all unique tags
-      function populateFilterDropdown() {
+      // Fuzzy match function - returns score (higher = better match), -1 for no match
+      function fuzzyMatch(pattern, str) {
+        pattern = pattern.toLowerCase();
+        str = str.toLowerCase();
+
+        // Exact match gets highest score
+        if (str === pattern) return 1000;
+
+        // Starts with pattern gets high score
+        if (str.startsWith(pattern)) return 500 + (pattern.length / str.length) * 100;
+
+        // Contains pattern gets medium score
+        if (str.includes(pattern)) return 200 + (pattern.length / str.length) * 100;
+
+        // Fuzzy character matching
+        let patternIdx = 0;
+        let score = 0;
+        let consecutiveBonus = 0;
+
+        for (let i = 0; i < str.length && patternIdx < pattern.length; i++) {
+          if (str[i] === pattern[patternIdx]) {
+            score += 10 + consecutiveBonus;
+            consecutiveBonus += 5; // Reward consecutive matches
+            patternIdx++;
+          } else {
+            consecutiveBonus = 0;
+          }
+        }
+
+        // All characters must match
+        if (patternIdx === pattern.length) {
+          return score;
+        }
+
+        return -1; // No match
+      }
+
+      // Render tag search results
+      function renderTagSearchResults(query = '') {
         const tagList = document.getElementById('filter-tag-list');
         if (!tagList) return;
 
         if (allTags.size === 0) {
-          tagList.innerHTML = '<p class="text-zinc-500 text-sm italic">No tags available</p>';
+          tagList.innerHTML = '<p class="text-zinc-500 text-sm italic px-3 py-2">No tags available</p>';
           return;
         }
 
-        // Sort tags alphabetically
-        const sortedTags = Array.from(allTags).sort();
+        let tagsToShow;
 
-        tagList.innerHTML = sortedTags.map(tag => `
-          <div class="filter-tag-item ${activeTagFilters.has(tag) ? 'selected' : ''}" data-tag="${escapeHtml(tag)}" onclick="toggleTagFromDropdown('${escapeHtml(tag)}')">
-            <div class="filter-tag-checkbox">
-              <svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
-              </svg>
-            </div>
-            <span class="text-zinc-300 text-sm">${escapeHtml(tag)}</span>
+        if (query.trim() === '') {
+          // Show all tags sorted alphabetically when no query
+          tagsToShow = Array.from(allTags)
+            .filter(tag => !activeTagFilters.has(tag.toLowerCase().trim()))
+            .sort()
+            .slice(0, 10); // Limit to 10 when showing all
+        } else {
+          // Fuzzy search and sort by score
+          tagsToShow = Array.from(allTags)
+            .filter(tag => !activeTagFilters.has(tag.toLowerCase().trim()))
+            .map(tag => ({ tag, score: fuzzyMatch(query, tag) }))
+            .filter(item => item.score > 0)
+            .sort((a, b) => b.score - a.score)
+            .slice(0, 8)
+            .map(item => item.tag);
+        }
+
+        if (tagsToShow.length === 0) {
+          tagList.innerHTML = query.trim()
+            ? '<p class="text-zinc-500 text-sm italic px-3 py-2">No matching tags</p>'
+            : '<p class="text-zinc-500 text-sm italic px-3 py-2">All tags selected</p>';
+          return;
+        }
+
+        tagList.innerHTML = tagsToShow.map(tag => `
+          <div class="filter-tag-result" data-tag="${escapeHtml(tag)}" onclick="selectTagFromSearch('${escapeHtml(tag)}')">
+            <svg class="w-4 h-4 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A2 2 0 013 12V7a4 4 0 014-4z"/>
+            </svg>
+            <span class="text-zinc-300 text-sm">${highlightMatch(tag, query)}</span>
           </div>
         `).join('');
       }
 
-      // Toggle tag from dropdown
-      function toggleTagFromDropdown(tag) {
-        const normalizedTag = tag.toLowerCase().trim();
-        if (activeTagFilters.has(normalizedTag)) {
-          activeTagFilters.delete(normalizedTag);
-        } else {
-          activeTagFilters.add(normalizedTag);
+      // Highlight matching characters in tag
+      function highlightMatch(tag, query) {
+        if (!query.trim()) return escapeHtml(tag);
+
+        const lowerTag = tag.toLowerCase();
+        const lowerQuery = query.toLowerCase();
+
+        // Simple highlight for contains match
+        const idx = lowerTag.indexOf(lowerQuery);
+        if (idx !== -1) {
+          return escapeHtml(tag.slice(0, idx)) +
+                 '<span class="text-cyan-400 font-medium">' + escapeHtml(tag.slice(idx, idx + query.length)) + '</span>' +
+                 escapeHtml(tag.slice(idx + query.length));
         }
-        renderFilterChips();
-        updateFilterDropdown();
-        updateFilterBadge();
-        applyFilters();
+
+        return escapeHtml(tag);
       }
 
-      // Update filter dropdown to reflect current selections
-      function updateFilterDropdown() {
-        const tagList = document.getElementById('filter-tag-list');
-        if (!tagList) return;
+      // Select tag from search results
+      function selectTagFromSearch(tag) {
+        const normalizedTag = tag.toLowerCase().trim();
+        if (!activeTagFilters.has(normalizedTag)) {
+          activeTagFilters.add(normalizedTag);
+          renderFilterChips();
+          updateSelectedTagsSection();
+          updateFilterBadge();
+          applyFilters();
 
-        tagList.querySelectorAll('.filter-tag-item').forEach(item => {
-          const tag = item.dataset.tag;
-          if (activeTagFilters.has(tag)) {
-            item.classList.add('selected');
-          } else {
-            item.classList.remove('selected');
+          // Clear search and refresh results
+          const searchInput = document.getElementById('tag-search-input');
+          if (searchInput) {
+            searchInput.value = '';
+            renderTagSearchResults('');
           }
+        }
+      }
+
+      // Update selected tags section in dropdown
+      function updateSelectedTagsSection() {
+        const section = document.getElementById('selected-tags-section');
+        const list = document.getElementById('selected-tags-list');
+        if (!section || !list) return;
+
+        if (activeTagFilters.size === 0) {
+          section.classList.add('hidden');
+          return;
+        }
+
+        section.classList.remove('hidden');
+        list.innerHTML = Array.from(activeTagFilters).map(tag => `
+          <span class="selected-tag-chip" onclick="removeTagFromDropdown('${escapeHtml(tag)}')">
+            ${escapeHtml(tag)}
+            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </span>
+        `).join('');
+      }
+
+      // Remove tag from dropdown
+      function removeTagFromDropdown(tag) {
+        const normalizedTag = tag.toLowerCase().trim();
+        activeTagFilters.delete(normalizedTag);
+        renderFilterChips();
+        updateSelectedTagsSection();
+        updateFilterBadge();
+        applyFilters();
+
+        // Refresh search results to show the removed tag again
+        const searchInput = document.getElementById('tag-search-input');
+        renderTagSearchResults(searchInput?.value || '');
+      }
+
+      // Initialize tag search input
+      const tagSearchInput = document.getElementById('tag-search-input');
+      if (tagSearchInput) {
+        tagSearchInput.addEventListener('input', (e) => {
+          renderTagSearchResults(e.target.value);
         });
+
+        // Prevent dropdown from closing when clicking in search input
+        tagSearchInput.addEventListener('click', (e) => {
+          e.stopPropagation();
+        });
+      }
+
+      // Legacy function for backward compatibility
+      function toggleTagFromDropdown(tag) {
+        selectTagFromSearch(tag);
+      }
+
+      // Legacy function
+      function updateFilterDropdown() {
+        const searchInput = document.getElementById('tag-search-input');
+        renderTagSearchResults(searchInput?.value || '');
+        updateSelectedTagsSection();
+      }
+
+      // Renamed from populateFilterDropdown
+      function populateFilterDropdown() {
+        renderTagSearchResults('');
+        updateSelectedTagsSection();
       }
 
       // Update filter badge count
@@ -720,6 +1026,8 @@
       window.removeTagFilter = removeTagFilter;
       window.clearAllFilters = clearAllFilters;
       window.toggleTagFromDropdown = toggleTagFromDropdown;
+      window.selectTagFromSearch = selectTagFromSearch;
+      window.removeTagFromDropdown = removeTagFromDropdown;
       window.openAddModal = openAddModal;
       window.closeAddModal = closeAddModal;
       window.hideQuote = hideQuote;

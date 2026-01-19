@@ -106,13 +106,22 @@
         </button>
 
         <!-- Tag Filter Dropdown -->
-        <div id="filter-dropdown" class="filter-dropdown absolute right-0 top-full mt-2 w-64 bg-zinc-900 border border-zinc-800 rounded-xl shadow-xl shadow-black/50 opacity-0 invisible translate-y-[-10px] transition-all duration-300 z-50">
-          <div class="p-3 border-b border-zinc-800">
-            <h3 class="text-sm font-semibold text-zinc-200">Filter by Tags</h3>
+        <div id="filter-dropdown" class="filter-dropdown absolute right-0 top-full mt-2 w-72 bg-zinc-900 border border-zinc-800 rounded-xl shadow-xl shadow-black/50 opacity-0 invisible translate-y-[-10px] transition-all duration-300 z-50">
+          <div class="p-3">
+            <input
+              type="text"
+              id="tag-search-input"
+              placeholder="Search tags..."
+              class="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-200 text-sm placeholder-zinc-500 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
+              autocomplete="off"
+            >
           </div>
-          <div id="filter-tag-list" class="p-3 max-h-64 overflow-y-auto">
+          <div id="filter-tag-list" class="max-h-64 overflow-y-auto">
             <!-- Tags will be populated by JavaScript -->
-            <p class="text-zinc-500 text-sm italic">Loading tags...</p>
+          </div>
+          <div id="selected-tags-section" class="hidden border-t border-zinc-800 p-3">
+            <p class="text-xs text-zinc-500 uppercase tracking-wider mb-2">Selected</p>
+            <div id="selected-tags-list" class="flex flex-wrap gap-2"></div>
           </div>
         </div>
       </div>

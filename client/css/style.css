@@ -219,6 +219,9 @@
   }
 }
 @layer utilities {
+  .collapse {
+    visibility: collapse;
+  }
   .invisible {
     visibility: hidden;
   }
@@ -351,8 +354,8 @@
   .w-6 {
     width: calc(var(--spacing) * 6);
   }
-  .w-64 {
-    width: calc(var(--spacing) * 64);
+  .w-72 {
+    width: calc(var(--spacing) * 72);
   }
   .w-full {
     width: 100%;
@@ -472,10 +475,6 @@
   .border-t {
     border-top-style: var(--tw-border-style);
     border-top-width: 1px;
-  }
-  .border-b {
-    border-bottom-style: var(--tw-border-style);
-    border-bottom-width: 1px;
   }
   .border-cyan-700 {
     border-color: var(--color-cyan-700);
@@ -878,6 +877,11 @@
       }
     }
   }
+  .focus\:border-cyan-500 {
+    &:focus {
+      border-color: var(--color-cyan-500);
+    }
+  }
   .focus\:ring-1 {
     &:focus {
       --tw-ring-shadow: var(--tw-ring-inset,) 0 0 0 calc(1px + var(--tw-ring-offset-width)) var(--tw-ring-color, currentcolor);
@@ -893,6 +897,11 @@
   .focus\:ring-cyan-400 {
     &:focus {
       --tw-ring-color: var(--color-cyan-400);
+    }
+  }
+  .focus\:ring-cyan-500 {
+    &:focus {
+      --tw-ring-color: var(--color-cyan-500);
     }
   }
   .focus\:ring-offset-2 {
@@ -939,22 +948,22 @@
 .quote-card {
   perspective: 1000px;
   cursor: pointer;
-  transition: transform 0.3s ease;
+  transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1), z-index 0s;
   position: relative;
+  z-index: 1;
 }
 .quote-card:hover {
+  z-index: 10;
+}
+.quote-card:not(.animating):hover {
   transform: scale(1.02);
 }
 .card-inner {
   position: relative;
   width: 100%;
   height: 280px;
-  transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1), height 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform 0.7s cubic-bezier(0.34, 1.56, 0.64, 1), height 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
   transform-style: preserve-3d;
-}
-.quote-card:hover .card-inner {
-  height: auto;
-  min-height: 280px;
 }
 .quote-card.flipped .card-inner {
   transform: rotateY(180deg);
@@ -967,7 +976,7 @@
   overflow: hidden;
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: height 0.6s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.5s cubic-bezier(0.34, 1.56, 0.64, 1), border-color 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
   position: relative;
 }
 .card-front::before, .card-back::before {
@@ -990,8 +999,6 @@
   animation: shimmer 2.5s ease-in-out infinite alternate;
 }
 .quote-card:hover .card-front, .quote-card:hover .card-back {
-  height: auto;
-  min-height: 280px;
   overflow: visible;
 }
 .card-front {
@@ -1002,6 +1009,10 @@
   position: absolute;
   top: 0;
   left: 0;
+  right: 0;
+  bottom: 0;
+  height: auto !important;
+  min-height: 280px;
   transform: rotateY(180deg);
 }
 .card-content {
@@ -1022,7 +1033,7 @@
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 5;
   overflow: hidden;
-  transition: all 0.3s ease;
+  transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 .quote-card:hover .quote-text {
   -webkit-line-clamp: unset;
@@ -1033,7 +1044,7 @@
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 3;
   overflow: hidden;
-  transition: all 0.3s ease;
+  transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 .quote-card:hover .notes-text {
   -webkit-line-clamp: unset;
@@ -1106,41 +1117,50 @@
   visibility: visible;
   transform: translateY(0);
 }
-.filter-tag-item {
+.filter-tag-result {
   display: flex;
   align-items: center;
   gap: 0.5rem;
   padding: 0.5rem 0.75rem;
-  border-radius: 0.5rem;
+  margin: 0 0.5rem;
+  border-radius: 0.375rem;
   cursor: pointer;
-  transition: background-color 0.2s ease;
+  transition: background-color 0.15s ease;
 }
-.filter-tag-item:hover {
-  background-color: rgba(63, 63, 70, 0.5);
+.filter-tag-result:first-child {
+  margin-top: 0.25rem;
 }
-.filter-tag-item.selected {
+.filter-tag-result:last-child {
+  margin-bottom: 0.25rem;
+}
+.filter-tag-result:hover {
   background-color: rgba(6, 182, 212, 0.15);
 }
-.filter-tag-checkbox {
-  width: 1rem;
-  height: 1rem;
-  border: 2px solid rgb(113, 113, 122);
-  border-radius: 0.25rem;
-  display: flex;
+.filter-tag-result:hover svg {
+  color: rgb(6, 182, 212);
+}
+.selected-tag-chip {
+  display: inline-flex;
   align-items: center;
-  justify-content: center;
-  transition: all 0.2s ease;
-  flex-shrink: 0;
+  gap: 0.25rem;
+  padding: 0.25rem 0.5rem;
+  background-color: rgba(6, 182, 212, 0.2);
+  border: 1px solid rgba(6, 182, 212, 0.4);
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  color: rgb(103, 232, 249);
+  cursor: pointer;
+  transition: all 0.15s ease;
 }
-.filter-tag-item.selected .filter-tag-checkbox {
-  background-color: rgb(6, 182, 212);
-  border-color: rgb(6, 182, 212);
+.selected-tag-chip:hover {
+  background-color: rgba(239, 68, 68, 0.2);
+  border-color: rgba(239, 68, 68, 0.4);
+  color: rgb(252, 165, 165);
 }
-.filter-tag-checkbox svg {
-  opacity: 0;
-  transition: opacity 0.2s ease;
+.selected-tag-chip svg {
+  opacity: 0.7;
 }
-.filter-tag-item.selected .filter-tag-checkbox svg {
+.selected-tag-chip:hover svg {
   opacity: 1;
 }
 .search-input {
@@ -1434,13 +1454,10 @@
   animation: none;
 }
 .card-inner {
-  transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1), height 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition: transform 0.7s cubic-bezier(0.34, 1.56, 0.64, 1), height 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 .quote-card {
   cursor: default;
-}
-.quote-card:hover {
-  transform: scale(1.02);
 }
 body.modal-open {
   overflow: hidden;
