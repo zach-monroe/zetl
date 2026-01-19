@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"database/sql"
+	"log"
 	"net/http"
 	"strings"
 
@@ -66,10 +67,13 @@ func SignupHandler(db *sql.DB) gin.HandlerFunc {
 		// Create session
 		session := sessions.Default(c)
 		session.Set("user_id", user.ID)
+		log.Printf("[Signup Debug] Setting session user_id to: %d (type: %T)", user.ID, user.ID)
 		if err := session.Save(); err != nil {
+			log.Printf("[Signup Debug] Failed to save session: %v", err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create session"})
 			return
 		}
+		log.Printf("[Signup Debug] Session saved successfully for user: %s (ID: %d)", user.Username, user.ID)
 
 		c.JSON(http.StatusCreated, gin.H{
 			"message": "User created successfully",
@@ -117,16 +121,19 @@ func LoginHandler(db *sql.DB) gin.HandlerFunc {
 
 		// Update last login
 		if err := database.UpdateLastLogin(db, user.ID); err != nil {
-			// Log error but don't fail the login
+			log.Printf("[Login Debug] Failed to update last_login: %v", err)
 		}
 
 		// Create session
 		session := sessions.Default(c)
 		session.Set("user_id", user.ID)
+		log.Printf("[Login Debug] Setting session user_id to: %d (type: %T)", user.ID, user.ID)
 		if err := session.Save(); err != nil {
+			log.Printf("[Login Debug] Failed to save session: %v", err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create session"})
 			return
 		}
+		log.Printf("[Login Debug] Session saved successfully for user: %s (ID: %d)", user.Username, user.ID)
 
 		c.JSON(http.StatusOK, gin.H{
 			"message": "Login successful",

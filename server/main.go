@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"html/template"
+	"log"
 	"net/http"
 	"os"
 	"strings"
@@ -40,14 +41,35 @@ func getUserFromSession(c *gin.Context, db *database.DBConnection) map[string]in
 	userID := session.Get("user_id")
 
 	if userID == nil {
+		log.Printf("[Session Debug] user_id is nil in session")
 		return nil
 	}
 
-	user, err := database.GetUserByID(db.DB, userID.(int))
+	log.Printf("[Session Debug] user_id from session: %v (type: %T)", userID, userID)
+
+	// Handle different integer types that the session store might return
+	var userIDInt int
+	switch v := userID.(type) {
+	case int:
+		userIDInt = v
+	case int64:
+		userIDInt = int(v)
+	case float64:
+		userIDInt = int(v)
+	default:
+		log.Printf("[Session Debug] Unexpected user_id type: %T", userID)
+		return nil
+	}
+
+	log.Printf("[Session Debug] Converted user_id to int: %d", userIDInt)
+
+	user, err := database.GetUserByID(db.DB, userIDInt)
 	if err != nil {
+		log.Printf("[Session Debug] Failed to get user by ID %d: %v", userIDInt, err)
 		return nil
 	}
 
+	log.Printf("[Session Debug] Successfully retrieved user: %s (ID: %d)", user.Username, user.ID)
 	return user.ToResponse()
 }
 
