@@ -144,7 +144,8 @@
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
-        }
+        },
+        credentials: 'same-origin'
       });
       if (response.ok) {
         window.location.href = '/';
@@ -157,11 +158,38 @@
 {{ end }}
 
 {{ define "quote-cards" }}
+{{ $user := .user }}
 {{ range .items }}
-<div class="quote-card group" onclick="this.classList.toggle('flipped')">
+<div class="quote-card group" data-quote-id="{{ .QuoteID }}">
   <div class="card-inner">
     <!-- Front of card -->
     <div class="card-front bg-zinc-900 rounded-xl shadow-lg border border-zinc-800">
+      {{ if and $user (eq .UserID (index $user "id")) }}
+      <!-- 3-dot menu for owner -->
+      <div class="card-menu-container">
+        <button class="card-menu-btn" aria-label="Card options">
+          <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+            <circle cx="12" cy="5" r="2"/>
+            <circle cx="12" cy="12" r="2"/>
+            <circle cx="12" cy="19" r="2"/>
+          </svg>
+        </button>
+        <div class="card-menu">
+          <button onclick="openEditModal({{ .QuoteID }}, '{{ js .Quote }}', '{{ js .Author }}', '{{ js .Book }}', '{{ js (join .Tags ", ") }}', '{{ js .Notes }}')" class="card-menu-item">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+            </svg>
+            Edit
+          </button>
+          <button onclick="openDeleteModal({{ .QuoteID }})" class="card-menu-item card-menu-item-danger">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+            </svg>
+            Delete
+          </button>
+        </div>
+      </div>
+      {{ end }}
       <!-- Content -->
       <div class="card-content p-6">
         <p class="text-zinc-200 text-lg leading-relaxed quote-text">
@@ -169,7 +197,7 @@
         </p>
       </div>
       <!-- Footer -->
-      <div class="card-footer px-6 py-3 border-t border-zinc-800">
+      <div class="card-footer px-6 py-3 border-t border-zinc-800 cursor-pointer">
         <div class="flex justify-between items-center">
           <div>
             <p class="text-cyan-400 font-medium text-sm">{{ .Author }}</p>
@@ -177,7 +205,7 @@
             <p class="text-zinc-500 text-xs italic">{{ .Book }}</p>
             {{ end }}
           </div>
-          <span class="text-zinc-600 text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+          <span class="flip-hint text-zinc-600 text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-300">
             Flip
           </span>
         </div>
@@ -186,6 +214,32 @@
 
     <!-- Back of card -->
     <div class="card-back bg-zinc-900 rounded-xl shadow-lg border border-zinc-800">
+      {{ if and $user (eq .UserID (index $user "id")) }}
+      <!-- 3-dot menu for owner (back side) -->
+      <div class="card-menu-container">
+        <button class="card-menu-btn" aria-label="Card options">
+          <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+            <circle cx="12" cy="5" r="2"/>
+            <circle cx="12" cy="12" r="2"/>
+            <circle cx="12" cy="19" r="2"/>
+          </svg>
+        </button>
+        <div class="card-menu">
+          <button onclick="openEditModal({{ .QuoteID }}, '{{ js .Quote }}', '{{ js .Author }}', '{{ js .Book }}', '{{ js (join .Tags ", ") }}', '{{ js .Notes }}')" class="card-menu-item">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+            </svg>
+            Edit
+          </button>
+          <button onclick="openDeleteModal({{ .QuoteID }})" class="card-menu-item card-menu-item-danger">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+            </svg>
+            Delete
+          </button>
+        </div>
+      </div>
+      {{ end }}
       <!-- Content -->
       <div class="card-content p-6">
         <!-- Tags -->
@@ -213,13 +267,13 @@
         </div>
       </div>
       <!-- Footer -->
-      <div class="card-footer px-6 py-3 border-t border-zinc-800">
+      <div class="card-footer px-6 py-3 border-t border-zinc-800 cursor-pointer">
         <div class="flex justify-between items-center">
           <div>
             <p class="text-zinc-500 text-xs truncate max-w-[180px]">"{{ .Quote }}"</p>
             <p class="text-cyan-400/70 text-xs">- {{ .Author }}</p>
           </div>
-          <span class="text-zinc-600 text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+          <span class="flip-hint text-zinc-600 text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-300">
             Flip
           </span>
         </div>

@@ -197,6 +197,7 @@
           const response = await fetch('/api/user/profile', {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
             body: JSON.stringify(formData)
           });
 
@@ -241,6 +242,7 @@
           const response = await fetch('/api/user/password', {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
             body: JSON.stringify(formData)
           });
 
@@ -277,6 +279,7 @@
           const response = await fetch('/api/user/privacy', {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
             body: JSON.stringify(formData)
           });
 

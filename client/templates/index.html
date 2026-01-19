@@ -17,7 +17,302 @@
         </div>
       </div>
     </div>
+
+    <!-- Edit Modal Overlay -->
+    <div id="edit-modal" class="modal-overlay">
+      <div class="modal-content">
+        <h2 class="text-2xl font-bold text-zinc-100 mb-6">Edit Quote</h2>
+        <form id="edit-form" class="space-y-4">
+          <input type="hidden" id="edit-quote-id" />
+          <div>
+            <label for="edit-quote-text" class="block text-sm font-medium text-zinc-300 mb-2">Quote</label>
+            <textarea
+              id="edit-quote-text"
+              rows="4"
+              class="form-input w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-100 placeholder-zinc-500 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 focus:outline-none transition-colors resize-none"
+              placeholder="Enter the quote..."
+            ></textarea>
+          </div>
+          <div>
+            <label for="edit-author" class="block text-sm font-medium text-zinc-300 mb-2">Author</label>
+            <input
+              type="text"
+              id="edit-author"
+              class="form-input w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-100 placeholder-zinc-500 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 focus:outline-none transition-colors"
+              placeholder="Author name..."
+            />
+          </div>
+          <div>
+            <label for="edit-book" class="block text-sm font-medium text-zinc-300 mb-2">Book (optional)</label>
+            <input
+              type="text"
+              id="edit-book"
+              class="form-input w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-100 placeholder-zinc-500 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 focus:outline-none transition-colors"
+              placeholder="Book title..."
+            />
+          </div>
+          <div>
+            <label for="edit-tags" class="block text-sm font-medium text-zinc-300 mb-2">Tags (comma separated)</label>
+            <input
+              type="text"
+              id="edit-tags"
+              class="form-input w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-100 placeholder-zinc-500 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 focus:outline-none transition-colors"
+              placeholder="wisdom, philosophy, life..."
+            />
+          </div>
+          <div>
+            <label for="edit-notes" class="block text-sm font-medium text-zinc-300 mb-2">Notes (optional)</label>
+            <textarea
+              id="edit-notes"
+              rows="3"
+              class="form-input w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-100 placeholder-zinc-500 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 focus:outline-none transition-colors resize-none"
+              placeholder="Your thoughts on this quote..."
+            ></textarea>
+          </div>
+          <div id="edit-error" class="hidden error-message bg-red-900/50 border border-red-700 text-red-200 px-4 py-3 rounded-lg text-sm"></div>
+          <div class="flex gap-3 justify-end pt-4">
+            <button
+              type="button"
+              onclick="closeEditModal()"
+              class="py-2 px-6 bg-zinc-700 hover:bg-zinc-600 text-zinc-200 font-medium rounded-lg transition-colors duration-200"
+            >
+              Discard
+            </button>
+            <button
+              type="submit"
+              class="btn-primary py-2 px-6 bg-cyan-600 hover:bg-cyan-500 text-white font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:ring-offset-2 focus:ring-offset-zinc-900"
+            >
+              Save Changes
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div id="delete-modal" class="modal-overlay">
+      <div class="modal-content modal-content-sm">
+        <h2 class="text-xl font-bold text-zinc-100 mb-4">Delete Quote</h2>
+        <p class="text-zinc-400 mb-6">Are you sure you want to delete this quote? This action cannot be undone.</p>
+        <input type="hidden" id="delete-quote-id" />
+        <div id="delete-error" class="hidden error-message bg-red-900/50 border border-red-700 text-red-200 px-4 py-3 rounded-lg text-sm mb-4"></div>
+        <div class="flex gap-3 justify-end">
+          <button
+            type="button"
+            onclick="closeDeleteModal()"
+            class="py-2 px-6 bg-zinc-700 hover:bg-zinc-600 text-zinc-200 font-medium rounded-lg transition-colors duration-200"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onclick="confirmDelete()"
+            class="py-2 px-6 bg-red-600 hover:bg-red-500 text-white font-medium rounded-lg transition-colors duration-200"
+          >
+            Yes, delete this undying piece of knowledge
+          </button>
+        </div>
+      </div>
+    </div>
+
     {{ template "header-scripts" . }}
+    <script>
+      // Store current user ID for ownership checks
+      const currentUserId = {{ if .user }}{{ .user.id }}{{ else }}null{{ end }};
+
+      // Card flip - only on footer click
+      document.querySelectorAll('.card-footer').forEach(footer => {
+        footer.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const card = footer.closest('.quote-card');
+          // Add has-flipped class to enable animations after first interaction
+          if (!card.classList.contains('has-flipped')) {
+            card.classList.add('has-flipped');
+          }
+          card.classList.toggle('flipped');
+        });
+      });
+
+      // Prevent card flip when clicking on menu
+      document.querySelectorAll('.card-menu-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          // Close other menus
+          document.querySelectorAll('.card-menu').forEach(menu => {
+            if (menu !== btn.nextElementSibling) {
+              menu.classList.remove('open');
+            }
+          });
+          btn.nextElementSibling.classList.toggle('open');
+        });
+      });
+
+      // Close menus when clicking outside
+      document.addEventListener('click', (e) => {
+        if (!e.target.closest('.card-menu-container')) {
+          document.querySelectorAll('.card-menu').forEach(menu => {
+            menu.classList.remove('open');
+          });
+        }
+      });
+
+      // Check session validity
+      async function checkSession() {
+        try {
+          const response = await fetch('/api/user', {
+            method: 'GET',
+            credentials: 'same-origin'
+          });
+          return response.ok;
+        } catch {
+          return false;
+        }
+      }
+
+      // Edit Modal Functions
+      function openEditModal(quoteId, quote, author, book, tags, notes) {
+        document.getElementById('edit-quote-id').value = quoteId;
+        document.getElementById('edit-quote-text').value = quote;
+        document.getElementById('edit-author').value = author;
+        document.getElementById('edit-book').value = book || '';
+        document.getElementById('edit-tags').value = tags || '';
+        document.getElementById('edit-notes').value = notes || '';
+        document.getElementById('edit-error').classList.add('hidden');
+
+        const modal = document.getElementById('edit-modal');
+        modal.classList.add('open');
+        document.body.style.overflow = 'hidden';
+      }
+
+      function closeEditModal() {
+        const modal = document.getElementById('edit-modal');
+        modal.classList.remove('open');
+        document.body.style.overflow = '';
+      }
+
+      // Delete Modal Functions
+      function openDeleteModal(quoteId) {
+        document.getElementById('delete-quote-id').value = quoteId;
+        document.getElementById('delete-error').classList.add('hidden');
+
+        const modal = document.getElementById('delete-modal');
+        modal.classList.add('open');
+        document.body.style.overflow = 'hidden';
+      }
+
+      function closeDeleteModal() {
+        const modal = document.getElementById('delete-modal');
+        modal.classList.remove('open');
+        document.body.style.overflow = '';
+      }
+
+      // Edit Form Submit
+      document.getElementById('edit-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const errorDiv = document.getElementById('edit-error');
+        errorDiv.classList.add('hidden');
+
+        // Check session first
+        if (!await checkSession()) {
+          errorDiv.textContent = 'Your session has expired. Please log in again.';
+          errorDiv.classList.remove('hidden');
+          return;
+        }
+
+        const quoteId = document.getElementById('edit-quote-id').value;
+        const tagsStr = document.getElementById('edit-tags').value;
+        const tags = tagsStr ? tagsStr.split(',').map(t => t.trim()).filter(t => t) : [];
+
+        const formData = {
+          quote: document.getElementById('edit-quote-text').value,
+          author: document.getElementById('edit-author').value,
+          book: document.getElementById('edit-book').value,
+          tags: tags,
+          notes: document.getElementById('edit-notes').value
+        };
+
+        try {
+          const response = await fetch(`/api/quote/${quoteId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify(formData)
+          });
+
+          const data = await response.json();
+
+          if (response.ok) {
+            closeEditModal();
+            // Refresh the page to show updated content
+            window.location.reload();
+          } else {
+            errorDiv.textContent = data.error || 'Failed to update quote.';
+            errorDiv.classList.remove('hidden');
+          }
+        } catch (error) {
+          errorDiv.textContent = 'An error occurred. Please try again.';
+          errorDiv.classList.remove('hidden');
+        }
+      });
+
+      // Delete Confirmation
+      async function confirmDelete() {
+        const errorDiv = document.getElementById('delete-error');
+        errorDiv.classList.add('hidden');
+
+        // Check session first
+        if (!await checkSession()) {
+          errorDiv.textContent = 'Your session has expired. Please log in again.';
+          errorDiv.classList.remove('hidden');
+          return;
+        }
+
+        const quoteId = document.getElementById('delete-quote-id').value;
+
+        try {
+          const response = await fetch(`/api/quote/${quoteId}`, {
+            method: 'DELETE',
+            credentials: 'same-origin'
+          });
+
+          if (response.ok) {
+            closeDeleteModal();
+            // Remove the card from DOM
+            const card = document.querySelector(`[data-quote-id="${quoteId}"]`);
+            if (card) {
+              card.style.transform = 'scale(0.8)';
+              card.style.opacity = '0';
+              setTimeout(() => card.remove(), 300);
+            }
+          } else {
+            const data = await response.json();
+            errorDiv.textContent = data.error || 'Failed to delete quote.';
+            errorDiv.classList.remove('hidden');
+          }
+        } catch (error) {
+          errorDiv.textContent = 'An error occurred. Please try again.';
+          errorDiv.classList.remove('hidden');
+        }
+      }
+
+      // Close modals on overlay click
+      document.querySelectorAll('.modal-overlay').forEach(overlay => {
+        overlay.addEventListener('click', (e) => {
+          if (e.target === overlay) {
+            overlay.classList.remove('open');
+            document.body.style.overflow = '';
+          }
+        });
+      });
+
+      // Close modals on Escape key
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          closeEditModal();
+          closeDeleteModal();
+        }
+      });
+    </script>
   </body>
 </html>
 {{ end }}

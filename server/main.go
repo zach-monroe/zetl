@@ -3,8 +3,10 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"html/template"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-contrib/sessions/postgres"
@@ -72,6 +74,11 @@ func setupRouter(dbConn *database.DBConnection) *gin.Engine {
 	})
 
 	r.Use(sessions.Sessions("zetl_session", store))
+
+	// Custom template functions
+	r.SetFuncMap(template.FuncMap{
+		"join": strings.Join,
+	})
 
 	// HTML templates - load from templates directory
 	r.LoadHTMLGlob("../client/templates/*.html")
