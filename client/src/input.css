@@ -3,6 +3,11 @@
 @source "../index.html";
 @source "../templates/*.html";
 
+/* Prevent layout shift when scrollbar appears/disappears */
+html {
+  scrollbar-gutter: stable;
+}
+
 /* ===== Shimmer Animation ===== */
 @keyframes shimmer {
   0% {

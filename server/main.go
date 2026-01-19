@@ -105,6 +105,7 @@ func setupRouter(dbConn *database.DBConnection) *gin.Engine {
 	// HTML templates - load from templates directory
 	r.LoadHTMLGlob("../client/templates/*.html")
 	r.Static("/css", "../client/css")
+	r.Static("/js", "../client/js")
 
 	// Public page routes
 	r.GET("/", func(c *gin.Context) {
