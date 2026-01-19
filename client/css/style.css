@@ -277,9 +277,6 @@
   .hidden {
     display: none;
   }
-  .inline {
-    display: inline;
-  }
   .h-0\.5 {
     height: calc(var(--spacing) * 0.5);
   }

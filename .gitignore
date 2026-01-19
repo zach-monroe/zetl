@@ -2,3 +2,5 @@ server/.env
 client/.env
 server/schema/
 server/tmp/
+*.txt
+*.md
