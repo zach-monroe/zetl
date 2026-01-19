@@ -906,4 +906,12 @@ document.addEventListener('DOMContentLoaded', () => {
   initModalHandlers();
   initCardData();
   initSearch();
+
+  // Check for ?add=true query parameter to open add modal
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.get('add') === 'true') {
+    openAddModal();
+    // Clean up the URL without reloading
+    window.history.replaceState({}, document.title, window.location.pathname);
+  }
 });
