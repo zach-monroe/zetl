@@ -11,9 +11,28 @@
   <body class="bg-zinc-950 min-h-screen font-serif">
     <div class="flex items-center flex-col py-8 px-4">
       {{ template "header" . }}
+
+      <!-- Active Filters Container -->
+      <div id="active-filters" class="w-full max-w-7xl hidden mb-4">
+        <div class="flex items-center gap-2 flex-wrap px-2">
+          <span class="text-zinc-500 text-sm">Filters:</span>
+          <div id="filter-chips" class="flex items-center gap-2 flex-wrap"></div>
+          <button onclick="clearAllFilters()" class="text-zinc-500 hover:text-cyan-400 text-sm underline ml-2 transition-colors">
+            Clear all
+          </button>
+        </div>
+      </div>
+
       <div class="w-full max-w-7xl">
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <div id="quotes-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {{ template "quote-cards" . }}
+        </div>
+        <!-- No Results Message -->
+        <div id="no-results" class="hidden text-center py-12">
+          <p class="text-zinc-500 text-lg">No quotes match your search</p>
+          <button onclick="clearAllFilters()" class="mt-4 text-cyan-400 hover:text-cyan-300 underline transition-colors">
+            Clear filters
+          </button>
         </div>
       </div>
     </div>
@@ -112,6 +131,79 @@
             Yes, delete this undying piece of knowledge
           </button>
         </div>
+      </div>
+    </div>
+
+    <!-- Add Quote Modal -->
+    <div id="add-modal" class="modal-overlay">
+      <div class="modal-content">
+        <h2 class="text-2xl font-bold text-zinc-100 mb-6">Add New Quote</h2>
+        <form id="add-form" class="space-y-4">
+          <div>
+            <label for="add-quote-text" class="block text-sm font-medium text-zinc-300 mb-2">Quote <span class="text-red-400">*</span></label>
+            <textarea
+              id="add-quote-text"
+              rows="4"
+              required
+              class="form-input w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-100 placeholder-zinc-500 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 focus:outline-none transition-colors resize-none"
+              placeholder="Enter the quote..."
+            ></textarea>
+          </div>
+          <div>
+            <label for="add-author" class="block text-sm font-medium text-zinc-300 mb-2">Author <span class="text-red-400">*</span></label>
+            <input
+              type="text"
+              id="add-author"
+              required
+              class="form-input w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-100 placeholder-zinc-500 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 focus:outline-none transition-colors"
+              placeholder="Author name..."
+            />
+          </div>
+          <div>
+            <label for="add-book" class="block text-sm font-medium text-zinc-300 mb-2">Book <span class="text-red-400">*</span></label>
+            <input
+              type="text"
+              id="add-book"
+              required
+              class="form-input w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-100 placeholder-zinc-500 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 focus:outline-none transition-colors"
+              placeholder="Book title..."
+            />
+          </div>
+          <div>
+            <label for="add-tags" class="block text-sm font-medium text-zinc-300 mb-2">Tags (comma separated)</label>
+            <input
+              type="text"
+              id="add-tags"
+              class="form-input w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-100 placeholder-zinc-500 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 focus:outline-none transition-colors"
+              placeholder="wisdom, philosophy, life..."
+            />
+          </div>
+          <div>
+            <label for="add-notes" class="block text-sm font-medium text-zinc-300 mb-2">Notes (optional)</label>
+            <textarea
+              id="add-notes"
+              rows="3"
+              class="form-input w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-100 placeholder-zinc-500 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 focus:outline-none transition-colors resize-none"
+              placeholder="Your thoughts on this quote..."
+            ></textarea>
+          </div>
+          <div id="add-error" class="hidden error-message bg-red-900/50 border border-red-700 text-red-200 px-4 py-3 rounded-lg text-sm"></div>
+          <div class="flex gap-3 justify-end pt-4">
+            <button
+              type="button"
+              onclick="closeAddModal()"
+              class="py-2 px-6 bg-zinc-700 hover:bg-zinc-600 text-zinc-200 font-medium rounded-lg transition-colors duration-200"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              class="btn-primary py-2 px-6 bg-cyan-600 hover:bg-cyan-500 text-white font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:ring-offset-2 focus:ring-offset-zinc-900"
+            >
+              Add Quote
+            </button>
+          </div>
+        </form>
       </div>
     </div>
 
@@ -310,8 +402,222 @@
         if (e.key === 'Escape') {
           closeEditModal();
           closeDeleteModal();
+          closeAddModal();
         }
       });
+
+      // ============================================
+      // Add Quote Modal Functions
+      // ============================================
+      function openAddModal() {
+        // Clear the form
+        document.getElementById('add-form').reset();
+        document.getElementById('add-error').classList.add('hidden');
+
+        const modal = document.getElementById('add-modal');
+        modal.classList.add('open');
+        document.body.style.overflow = 'hidden';
+
+        // Focus on the quote textarea
+        setTimeout(() => {
+          document.getElementById('add-quote-text').focus();
+        }, 100);
+      }
+
+      function closeAddModal() {
+        const modal = document.getElementById('add-modal');
+        modal.classList.remove('open');
+        document.body.style.overflow = '';
+      }
+
+      // Add Form Submit
+      document.getElementById('add-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const errorDiv = document.getElementById('add-error');
+        errorDiv.classList.add('hidden');
+
+        // Check session first
+        if (!await checkSession()) {
+          errorDiv.textContent = 'Your session has expired. Please log in again.';
+          errorDiv.classList.remove('hidden');
+          return;
+        }
+
+        const tagsStr = document.getElementById('add-tags').value;
+        const tags = tagsStr ? tagsStr.split(',').map(t => t.trim()).filter(t => t) : [];
+
+        const formData = {
+          quote: document.getElementById('add-quote-text').value,
+          author: document.getElementById('add-author').value,
+          book: document.getElementById('add-book').value,
+          tags: tags,
+          notes: document.getElementById('add-notes').value
+        };
+
+        try {
+          const response = await fetch('/api/quote', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify(formData)
+          });
+
+          const data = await response.json();
+
+          if (response.ok) {
+            closeAddModal();
+            // Refresh the page to show the new quote
+            window.location.reload();
+          } else {
+            errorDiv.textContent = data.error || 'Failed to add quote.';
+            errorDiv.classList.remove('hidden');
+          }
+        } catch (error) {
+          errorDiv.textContent = 'An error occurred. Please try again.';
+          errorDiv.classList.remove('hidden');
+        }
+      });
+
+      // ============================================
+      // Search and Tag Filtering
+      // ============================================
+      let activeTagFilters = new Set();
+      let searchQuery = '';
+
+      // Store card data for filtering
+      const cardData = [];
+      document.querySelectorAll('.quote-card').forEach(card => {
+        const quoteText = card.querySelector('.quote-text')?.textContent?.trim() || '';
+        const author = card.querySelector('.text-cyan-400')?.textContent?.trim() || '';
+        const book = card.querySelector('.text-zinc-500.italic')?.textContent?.trim() || '';
+        const tags = Array.from(card.querySelectorAll('.tag-pill')).map(t => t.textContent.trim().toLowerCase());
+
+        cardData.push({
+          element: card,
+          quote: quoteText.toLowerCase(),
+          author: author.toLowerCase(),
+          book: book.toLowerCase(),
+          tags: tags
+        });
+      });
+
+      // Search input handler
+      searchInput.addEventListener('input', (e) => {
+        searchQuery = e.target.value.toLowerCase().trim();
+        applyFilters();
+      });
+
+      // Add tag filter
+      function addTagFilter(tag) {
+        const normalizedTag = tag.toLowerCase().trim();
+        if (!activeTagFilters.has(normalizedTag)) {
+          activeTagFilters.add(normalizedTag);
+          renderFilterChips();
+          applyFilters();
+        }
+      }
+
+      // Remove tag filter
+      function removeTagFilter(tag) {
+        activeTagFilters.delete(tag);
+        renderFilterChips();
+        applyFilters();
+      }
+
+      // Clear all filters
+      function clearAllFilters() {
+        activeTagFilters.clear();
+        searchQuery = '';
+        searchInput.value = '';
+        renderFilterChips();
+        applyFilters();
+      }
+
+      // Render filter chips
+      function renderFilterChips() {
+        const container = document.getElementById('filter-chips');
+        const filtersContainer = document.getElementById('active-filters');
+
+        container.innerHTML = '';
+
+        if (activeTagFilters.size === 0) {
+          filtersContainer.classList.add('hidden');
+          return;
+        }
+
+        filtersContainer.classList.remove('hidden');
+
+        activeTagFilters.forEach(tag => {
+          const chip = document.createElement('span');
+          chip.className = 'inline-flex items-center gap-1 px-3 py-1 bg-cyan-900/50 border border-cyan-700 text-cyan-300 rounded-full text-sm';
+          chip.innerHTML = `
+            ${escapeHtml(tag)}
+            <button type="button" onclick="removeTagFilter('${escapeHtml(tag)}')" class="ml-1 hover:text-white transition-colors">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+              </svg>
+            </button>
+          `;
+          container.appendChild(chip);
+        });
+      }
+
+      // Apply all filters
+      function applyFilters() {
+        let visibleCount = 0;
+
+        cardData.forEach(data => {
+          let matchesSearch = true;
+          let matchesTags = true;
+
+          // Check search query
+          if (searchQuery) {
+            matchesSearch = data.quote.includes(searchQuery) ||
+                           data.author.includes(searchQuery) ||
+                           data.book.includes(searchQuery);
+          }
+
+          // Check tag filters (AND logic - card must have ALL selected tags)
+          if (activeTagFilters.size > 0) {
+            matchesTags = Array.from(activeTagFilters).every(tag =>
+              data.tags.includes(tag)
+            );
+          }
+
+          if (matchesSearch && matchesTags) {
+            data.element.style.display = '';
+            visibleCount++;
+          } else {
+            data.element.style.display = 'none';
+          }
+        });
+
+        // Show/hide no results message
+        const noResults = document.getElementById('no-results');
+        const quotesGrid = document.getElementById('quotes-grid');
+
+        if (visibleCount === 0 && (searchQuery || activeTagFilters.size > 0)) {
+          noResults.classList.remove('hidden');
+          quotesGrid.classList.add('hidden');
+        } else {
+          noResults.classList.add('hidden');
+          quotesGrid.classList.remove('hidden');
+        }
+      }
+
+      // Helper function to escape HTML
+      function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+      }
+
+      // Make addTagFilter available globally (for onclick handlers)
+      window.addTagFilter = addTagFilter;
+      window.removeTagFilter = removeTagFilter;
+      window.clearAllFilters = clearAllFilters;
+      window.openAddModal = openAddModal;
+      window.closeAddModal = closeAddModal;
     </script>
   </body>
 </html>
