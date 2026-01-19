@@ -212,6 +212,9 @@
       // Store current user ID for ownership checks
       const currentUserId = {{ if .user }}{{ .user.id }}{{ else }}null{{ end }};
 
+      // Track currently hovered card for flip-during-hover detection
+      let currentlyHoveredCard = null;
+
       // Card flip - only on footer click
       document.querySelectorAll('.card-footer').forEach(footer => {
         footer.addEventListener('click', (e) => {
@@ -222,6 +225,14 @@
             card.classList.add('has-flipped');
           }
           card.classList.toggle('flipped');
+
+          // If card is currently hovered, recalculate expansion for new face
+          if (currentlyHoveredCard === card) {
+            // Small delay to let the flip class toggle take effect
+            setTimeout(() => {
+              expandCard(card);
+            }, 50);
+          }
         });
       });
 
@@ -251,7 +262,8 @@
       // ===== Smooth Card Expansion Animation =====
       const CARD_BASE_HEIGHT = 280;
       const ANIMATION_DURATION = 500; // ms
-      const BOUNCE_EASING = 'cubic-bezier(0.34, 1.56, 0.64, 1)';
+      const BOUNCE_EASING = 'cubic-bezier(0.34, 1.56, 0.64, 1)'; // Bouncy for expansion
+      const SMOOTH_EASING = 'cubic-bezier(0.4, 0, 0.2, 1)'; // Smooth ease-out for contraction
 
       // Store original positions for FLIP animation
       let cardPositions = new Map();
@@ -339,63 +351,80 @@
         return expandedHeight;
       }
 
+      // Expand a card to fit its content (can be called on hover or flip)
+      function expandCard(card) {
+        const cardInner = card.querySelector('.card-inner');
+        const cardFront = card.querySelector('.card-front');
+
+        // Capture positions of all cards before expansion
+        const oldPositions = captureCardPositions();
+
+        // Measure what the expanded height should be for the current face
+        const expandedHeight = measureExpandedHeight(card);
+
+        // Get current height for smooth transition
+        const currentHeight = cardInner.offsetHeight || CARD_BASE_HEIGHT;
+
+        // Choose easing based on whether we're expanding or contracting
+        const isExpanding = expandedHeight > currentHeight;
+        const easing = isExpanding ? BOUNCE_EASING : SMOOTH_EASING;
+
+        // Set starting heights explicitly
+        cardInner.style.height = `${currentHeight}px`;
+        cardFront.style.height = `${currentHeight}px`;
+
+        // Force reflow
+        card.offsetHeight;
+
+        // Set up transitions
+        cardInner.style.transition = `height ${ANIMATION_DURATION}ms ${easing}`;
+        cardFront.style.transition = `height ${ANIMATION_DURATION}ms ${easing}`;
+
+        // Animate to expanded height
+        cardInner.style.height = `${expandedHeight}px`;
+        cardFront.style.height = `${expandedHeight}px`;
+
+        // Animate other cards to their new positions
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            animateCardsToNewPositions(oldPositions);
+          });
+        });
+      }
+
       // Handle card expansion on hover
       function initCardExpansion() {
         document.querySelectorAll('.quote-card').forEach(card => {
           const cardInner = card.querySelector('.card-inner');
           const cardFront = card.querySelector('.card-front');
-          const cardBack = card.querySelector('.card-back');
 
-          let isExpanded = false;
           let expandTimeout = null;
 
           card.addEventListener('mouseenter', () => {
             if (expandTimeout) clearTimeout(expandTimeout);
 
-            // Capture positions of all cards before expansion
-            const oldPositions = captureCardPositions();
+            // Track this card as hovered
+            currentlyHoveredCard = card;
 
-            // Measure what the expanded height should be
-            const expandedHeight = measureExpandedHeight(card);
-
-            // Set starting heights explicitly
-            cardInner.style.height = `${CARD_BASE_HEIGHT}px`;
-            cardFront.style.height = `${CARD_BASE_HEIGHT}px`;
-            // card-back uses CSS (top:0, bottom:0) to stretch with card-inner
-
-            // Force reflow
-            card.offsetHeight;
-
-            // Set up transitions
-            cardInner.style.transition = `height ${ANIMATION_DURATION}ms ${BOUNCE_EASING}`;
-            cardFront.style.transition = `height ${ANIMATION_DURATION}ms ${BOUNCE_EASING}`;
-
-            // Animate to expanded height
-            // card-front expansion creates the layout space
-            // card-back stretches automatically via CSS positioning
-            cardInner.style.height = `${expandedHeight}px`;
-            cardFront.style.height = `${expandedHeight}px`;
-
-            isExpanded = true;
-
-            // Animate other cards to their new positions
-            requestAnimationFrame(() => {
-              requestAnimationFrame(() => {
-                animateCardsToNewPositions(oldPositions);
-              });
-            });
+            // Expand the card
+            expandCard(card);
           });
 
           card.addEventListener('mouseleave', () => {
+            // Clear hover tracking
+            currentlyHoveredCard = null;
+
             expandTimeout = setTimeout(() => {
               // Capture positions before collapse
               const oldPositions = captureCardPositions();
 
+              // Use smooth easing for collapse (no bounce)
+              cardInner.style.transition = `height ${ANIMATION_DURATION}ms ${SMOOTH_EASING}`;
+              cardFront.style.transition = `height ${ANIMATION_DURATION}ms ${SMOOTH_EASING}`;
+
               // Animate back to base height
               cardInner.style.height = `${CARD_BASE_HEIGHT}px`;
               cardFront.style.height = `${CARD_BASE_HEIGHT}px`;
-
-              isExpanded = false;
 
               // Animate other cards
               requestAnimationFrame(() => {
@@ -406,7 +435,7 @@
 
               // Clean up explicit heights after animation
               setTimeout(() => {
-                if (!isExpanded) {
+                if (currentlyHoveredCard !== card) {
                   cardInner.style.height = '';
                   cardFront.style.height = '';
                   cardInner.style.transition = '';
