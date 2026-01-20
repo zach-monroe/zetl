@@ -4,102 +4,96 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Zetl is a quote management web application with a Go backend (Gin framework) and HTML/HTMX frontend. The application stores quotes with metadata (author, book, tags) in a PostgreSQL database and displays them in a card-based layout with TailwindCSS styling.
+Zetl is a quote management web application with a Go backend (Gin framework) and HTML/HTMX frontend. Users can store, browse, and manage quotes with metadata (author, book, tags, notes). Features session-based authentication, user profiles, and interactive card UI with flip animations.
 
 ## Development Commands
 
-### Running the Application
+All commands run from `server/` directory:
 
-**Development mode** (hot-reload for both Go and Tailwind):
 ```bash
-cd server
-make dev
+make dev              # Hot-reload for Go (air) + TailwindCSS watch mode
+make air              # Go server with hot-reload only
+make tailwind         # TailwindCSS watch mode only
+make tailwind-build   # One-time minified CSS build
 ```
 
-This runs both:
-- `air` for Go hot-reloading (watches `.go`, `.html`, `.tpl`, `.tmpl` files)
-- TailwindCSS in watch mode for CSS compilation
-
-**Individual services**:
+One-time CSS build (no watch):
 ```bash
-cd server
-make air        # Run Go server with hot-reload only
-make tailwind   # Run TailwindCSS watch mode only
-```
-
-**Standard build and run**:
-```bash
-cd server
-go build -o tmp/main .
-./tmp/main
+npx @tailwindcss/cli -i ../client/src/input.css -o ../client/css/style.css
 ```
 
 Server runs on `localhost:8080`
 
-### Dependencies
-
-Install Go dependencies:
-```bash
-cd server
-go mod download
-```
-
 ## Architecture
 
-### Backend Structure (`server/`)
+### Backend (`server/`)
 
-- **main.go**: Application entry point
-  - `setupRouter()`: Configures Gin routes and middleware
-  - Root endpoint `/` serves HTML with quotes from database
-  - `POST /quote`: Creates new quotes
-  - `/admin` endpoint group with basic auth (credentials in code: foo/bar, manu/123)
+```
+main.go              # Router setup, route definitions, session config
+handlers/            # HTTP handlers by domain
+  auth_handler.go    # Login, signup, logout, password reset
+  quote_handler.go   # CRUD for quotes
+  page_handlers.go   # HTML page rendering
+  settings_handler.go
+middleware/
+  auth.go            # AuthRequired(), QuoteOwnershipRequired()
+database/
+  database.go        # DB connection, legacy quote queries
+  user_queries.go    # User CRUD
+  quote_queries.go   # Quote CRUD
+models/
+  models.go          # Quote struct
+  user.go            # User, PrivacySettings structs
+services/
+  auth_service.go    # Password hashing (bcrypt)
+  email_service.go   # Password reset emails
+```
 
-- **database/database.go**: PostgreSQL connection and queries
-  - `StartDatabase()`: Loads `.env` from `server/.env` and establishes connection
-  - `FetchQuotesAsJson()`: Queries all quotes and converts to JSON (handles PostgreSQL array types for tags)
-  - `AddQuoteToDatabase()`: Inserts new quotes into database
+### Frontend (`client/`)
 
-- **models/models.go**: Data structures
-  - `Quote`: Represents a single quote with fields: quote_id, user_id, quote, author, book, tags
-  - `Quotes`: Array of Quote
+```
+templates/           # Go HTML templates
+  base.html          # Header, navigation, filter dropdown (shared partial)
+  index.html         # Home page with quote grid, modals
+  profile.html       # User profile with their quotes
+  login.html, signup.html, settings.html, etc.
+js/
+  main.js            # All client-side JS (card interactions, modals, search, filtering)
+src/
+  input.css          # TailwindCSS source
+css/
+  style.css          # Compiled CSS (don't edit directly)
+```
 
-### Frontend Structure (`client/`)
+### Key Patterns
 
-- **index.html**: Go template with three defined blocks:
-  - `index`: Main HTML structure, includes HTMX library
-  - `cards`: Container and grid layout
-  - `items`: Iterates through quotes and renders cards
+**Template inheritance**: Templates use Go's `{{ define }}` and `{{ template }}` for partials. `base.html` defines `header` and `header-scripts` blocks included in other pages.
 
-- **TailwindCSS**: Input file at `client/src/input.css`, compiled to `client/css/style.css`
+**Session authentication**: Uses `gin-contrib/sessions` with cookie store. User ID stored in session, retrieved via `middleware.AuthRequired()`.
 
-### Database Configuration
+**Quote ownership**: `middleware.QuoteOwnershipRequired()` checks if logged-in user owns the quote before allowing edit/delete.
 
-PostgreSQL connection uses environment variables from `server/.env`:
-- `DB_HOSTNAME`: Database host
-- `DB_USERNAME`: Database user
-- `DB_PASSWORD`: Database password
-- `DB_PORT`: Database port (typically 5432)
-- `DB_NAME`: Database name
+**Client-side interactivity**: `main.js` handles card flip animations, hover expansion (FLIP technique), 3-dot menus, modals, fuzzy tag search, and filtering. Functions exposed globally via `window.functionName` for onclick handlers.
 
-Database schema (quotes table):
-- `quote_id` (int, primary key)
-- `user_id` (int)
-- `quote` (text)
-- `author` (text)
-- `book` (text)
-- `tags` (text[], PostgreSQL array)
+**Dynamic user context**: Body tag has `data-user-id` attribute set by Go template, read by JS for ownership checks.
 
-### Key Implementation Details
+## API Routes
 
-1. **Tags handling**: PostgreSQL stores tags as text arrays (`text[]`). The database layer converts between PostgreSQL array format (`{tag1,tag2}`) and Go string slices.
+**Public**: `GET /`, `GET /login`, `GET /signup`, `GET /user/:id/quotes`
 
-2. **Quote creation flow**:
-   - POST request to `/quote` endpoint
-   - Raw JSON body read directly
-   - Passed to `AddQuoteToDatabase()` which parses and inserts into PostgreSQL
+**Auth** (`/auth`): `POST /login`, `POST /signup`, `POST /logout`, `POST /forgot-password`, `POST /reset-password`
 
-3. **Template rendering**: Server fetches all quotes on startup, unmarshals to Go structs, and passes to Gin HTML template for rendering.
+**Protected** (`/api`, requires auth):
+- `GET /user` - current user
+- `PUT /user/profile`, `PUT /user/password`, `PUT /user/privacy`
+- `POST /quote` - create quote
+- `PUT /quote/:id`, `DELETE /quote/:id` - requires ownership
 
-4. **Static files**: CSS served from `../client/css` relative to server directory.
+## Database
 
-5. **Hot reload**: Air config (`.air.toml`) watches for changes and rebuilds binary to `tmp/main`, excludes test files and `tmp/` directory.
+PostgreSQL with environment variables from `server/.env`:
+- `DB_HOSTNAME`, `DB_USERNAME`, `DB_PASSWORD`, `DB_PORT`, `DB_NAME`
+
+Key tables: `users`, `quotes`, `password_reset_tokens`
+
+Tags stored as PostgreSQL `text[]` arrays, converted to/from Go `[]string` in database layer.
