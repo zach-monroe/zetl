@@ -8,7 +8,7 @@
     <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.8/dist/htmx.min.js"></script>
     <link href='/css/style.css' rel="stylesheet">
   </head>
-  <body class="bg-zinc-950 min-h-screen font-serif">
+  <body class="bg-zinc-950 min-h-screen font-serif" data-user-id="{{ if .user }}{{ .user.id }}{{ end }}">
     <div class="flex items-center flex-col py-8 px-4">
       {{ template "header" . }}
       <div class="w-full max-w-7xl">
@@ -41,7 +41,7 @@
         </div>
 
         {{ if .items }}
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 items-start">
           {{ template "quote-cards" . }}
         </div>
         {{ else }}
@@ -58,7 +58,106 @@
         {{ end }}
       </div>
     </div>
+
+    <!-- Edit Modal Overlay -->
+    <div id="edit-modal" class="modal-overlay">
+      <div class="modal-content">
+        <h2 class="text-2xl font-bold text-zinc-100 mb-6">Edit Quote</h2>
+        <form id="edit-form" class="space-y-4">
+          <input type="hidden" id="edit-quote-id" />
+          <div>
+            <label for="edit-quote-text" class="block text-sm font-medium text-zinc-300 mb-2">Quote</label>
+            <textarea
+              id="edit-quote-text"
+              rows="4"
+              class="form-input w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-100 placeholder-zinc-500 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 focus:outline-none transition-colors resize-none"
+              placeholder="Enter the quote..."
+            ></textarea>
+          </div>
+          <div>
+            <label for="edit-author" class="block text-sm font-medium text-zinc-300 mb-2">Author</label>
+            <input
+              type="text"
+              id="edit-author"
+              class="form-input w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-100 placeholder-zinc-500 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 focus:outline-none transition-colors"
+              placeholder="Author name..."
+            />
+          </div>
+          <div>
+            <label for="edit-book" class="block text-sm font-medium text-zinc-300 mb-2">Book (optional)</label>
+            <input
+              type="text"
+              id="edit-book"
+              class="form-input w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-100 placeholder-zinc-500 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 focus:outline-none transition-colors"
+              placeholder="Book title..."
+            />
+          </div>
+          <div>
+            <label for="edit-tags" class="block text-sm font-medium text-zinc-300 mb-2">Tags (comma separated)</label>
+            <input
+              type="text"
+              id="edit-tags"
+              class="form-input w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-100 placeholder-zinc-500 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 focus:outline-none transition-colors"
+              placeholder="wisdom, philosophy, life..."
+            />
+          </div>
+          <div>
+            <label for="edit-notes" class="block text-sm font-medium text-zinc-300 mb-2">Notes (optional)</label>
+            <textarea
+              id="edit-notes"
+              rows="3"
+              class="form-input w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-100 placeholder-zinc-500 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 focus:outline-none transition-colors resize-none"
+              placeholder="Your thoughts on this quote..."
+            ></textarea>
+          </div>
+          <div id="edit-error" class="hidden error-message bg-red-900/50 border border-red-700 text-red-200 px-4 py-3 rounded-lg text-sm"></div>
+          <div class="flex gap-3 justify-end pt-4">
+            <button
+              type="button"
+              onclick="closeEditModal()"
+              class="py-2 px-6 bg-zinc-700 hover:bg-zinc-600 text-zinc-200 font-medium rounded-lg transition-colors duration-200"
+            >
+              Discard
+            </button>
+            <button
+              type="submit"
+              class="btn-primary py-2 px-6 bg-cyan-600 hover:bg-cyan-500 text-white font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:ring-offset-2 focus:ring-offset-zinc-900"
+            >
+              Save Changes
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div id="delete-modal" class="modal-overlay">
+      <div class="modal-content modal-content-sm">
+        <h2 class="text-xl font-bold text-zinc-100 mb-4">Delete Quote</h2>
+        <p class="text-zinc-400 mb-6">Are you sure you want to delete this quote? This action cannot be undone.</p>
+        <input type="hidden" id="delete-quote-id" />
+        <div id="delete-error" class="hidden error-message bg-red-900/50 border border-red-700 text-red-200 px-4 py-3 rounded-lg text-sm mb-4"></div>
+        <div class="flex gap-3 justify-end">
+          <button
+            type="button"
+            onclick="closeDeleteModal()"
+            class="py-2 px-6 bg-zinc-700 hover:bg-zinc-600 text-zinc-200 font-medium rounded-lg transition-colors duration-200"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onclick="confirmDelete()"
+            class="py-2 px-6 bg-red-600 hover:bg-red-500 text-white font-medium rounded-lg transition-colors duration-200"
+          >
+            Yes, delete this undying piece of knowledge
+          </button>
+        </div>
+      </div>
+    </div>
+
     {{ template "header-scripts" . }}
+    <script src="/js/main.js"></script>
   </body>
 </html>
 {{ end }}
