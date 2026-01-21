@@ -640,7 +640,6 @@ function selectTagFromSearch(tag) {
   const normalizedTag = tag.toLowerCase().trim();
   if (!activeTagFilters.has(normalizedTag)) {
     activeTagFilters.add(normalizedTag);
-    renderFilterChips();
     updateSelectedTagsSection();
     updateFilterBadge();
     applyFilters();
@@ -680,7 +679,6 @@ function updateSelectedTagsSection() {
 function removeTagFromDropdown(tag) {
   const normalizedTag = tag.toLowerCase().trim();
   activeTagFilters.delete(normalizedTag);
-  renderFilterChips();
   updateSelectedTagsSection();
   updateFilterBadge();
   applyFilters();
@@ -729,7 +727,6 @@ function addTagFilter(tag) {
   const normalizedTag = tag.toLowerCase().trim();
   if (!activeTagFilters.has(normalizedTag)) {
     activeTagFilters.add(normalizedTag);
-    renderFilterChips();
     updateFilterDropdown();
     updateFilterBadge();
     applyFilters();
@@ -739,7 +736,6 @@ function addTagFilter(tag) {
 // Remove tag filter
 function removeTagFilter(tag) {
   activeTagFilters.delete(tag);
-  renderFilterChips();
   updateFilterDropdown();
   updateFilterBadge();
   applyFilters();
@@ -751,42 +747,11 @@ function clearAllFilters() {
   searchQuery = '';
   const searchInputEl = document.getElementById('search-input');
   if (searchInputEl) searchInputEl.value = '';
-  renderFilterChips();
   updateFilterDropdown();
   updateFilterBadge();
   applyFilters();
 }
 
-// Render filter chips
-function renderFilterChips() {
-  const container = document.getElementById('filter-chips');
-  const filtersContainer = document.getElementById('active-filters');
-
-  if (!container || !filtersContainer) return;
-
-  container.innerHTML = '';
-
-  if (activeTagFilters.size === 0) {
-    filtersContainer.classList.add('hidden');
-    return;
-  }
-
-  filtersContainer.classList.remove('hidden');
-
-  activeTagFilters.forEach(tag => {
-    const chip = document.createElement('span');
-    chip.className = 'inline-flex items-center gap-1 px-3 py-1 bg-cyan-900/50 border border-cyan-700 text-cyan-300 rounded-full text-sm';
-    chip.innerHTML = `
-      ${escapeHtml(tag)}
-      <button type="button" onclick="removeTagFilter('${escapeHtml(tag)}')" class="ml-1 hover:text-white transition-colors">
-        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-        </svg>
-      </button>
-    `;
-    container.appendChild(chip);
-  });
-}
 
 // Apply all filters
 function applyFilters() {

@@ -12,17 +12,6 @@
     <div class="flex items-center flex-col py-8 px-4">
       {{ template "header" . }}
 
-      <!-- Active Filters Container -->
-      <div id="active-filters" class="w-full max-w-7xl hidden mb-4">
-        <div class="flex items-center gap-2 flex-wrap px-2">
-          <span class="text-zinc-500 text-sm">Filters:</span>
-          <div id="filter-chips" class="flex items-center gap-2 flex-wrap"></div>
-          <button onclick="clearAllFilters()" class="text-zinc-500 hover:text-cyan-400 text-sm underline ml-2 transition-colors">
-            Clear all
-          </button>
-        </div>
-      </div>
-
       <div class="w-full max-w-7xl">
         <div id="quotes-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 items-start">
           {{ template "quote-cards" . }}
