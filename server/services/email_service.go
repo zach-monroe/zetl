@@ -1,7 +1,9 @@
 package services
 
 import (
+	"crypto/tls"
 	"fmt"
+	"net"
 	"net/smtp"
 	"os"
 )
@@ -55,16 +57,67 @@ If you didn't request this, please ignore this email. Your password won't be cha
 Best,
 The Zetl Team`, resetLink)
 
-	message := fmt.Sprintf("From: %s\r\nTo: %s\r\nSubject: %s\r\n\r\n%s",
-		e.from, toEmail, subject, body)
+	return e.sendEmailWithTLS(toEmail, subject, body)
+}
 
-	auth := smtp.PlainAuth("", e.username, e.password, e.host)
+// sendEmailWithTLS sends an email using STARTTLS (required for Gmail port 587)
+func (e *EmailService) sendEmailWithTLS(toEmail, subject, body string) error {
 	addr := fmt.Sprintf("%s:%s", e.host, e.port)
 
-	err := smtp.SendMail(addr, auth, e.from, []string{toEmail}, []byte(message))
+	// Connect to the SMTP server
+	conn, err := net.Dial("tcp", addr)
 	if err != nil {
-		return fmt.Errorf("failed to send email: %w", err)
+		return fmt.Errorf("failed to connect to SMTP server: %w", err)
 	}
 
-	return nil
+	// Create SMTP client
+	client, err := smtp.NewClient(conn, e.host)
+	if err != nil {
+		conn.Close()
+		return fmt.Errorf("failed to create SMTP client: %w", err)
+	}
+	defer client.Close()
+
+	// Send STARTTLS command
+	tlsConfig := &tls.Config{
+		ServerName: e.host,
+	}
+	if err = client.StartTLS(tlsConfig); err != nil {
+		return fmt.Errorf("failed to start TLS: %w", err)
+	}
+
+	// Authenticate
+	auth := smtp.PlainAuth("", e.username, e.password, e.host)
+	if err = client.Auth(auth); err != nil {
+		return fmt.Errorf("failed to authenticate: %w", err)
+	}
+
+	// Set sender and recipient
+	if err = client.Mail(e.from); err != nil {
+		return fmt.Errorf("failed to set sender: %w", err)
+	}
+	if err = client.Rcpt(toEmail); err != nil {
+		return fmt.Errorf("failed to set recipient: %w", err)
+	}
+
+	// Send the email body
+	writer, err := client.Data()
+	if err != nil {
+		return fmt.Errorf("failed to get data writer: %w", err)
+	}
+
+	message := fmt.Sprintf("From: %s\r\nTo: %s\r\nSubject: %s\r\nMIME-Version: 1.0\r\nContent-Type: text/plain; charset=\"utf-8\"\r\n\r\n%s",
+		e.from, toEmail, subject, body)
+
+	_, err = writer.Write([]byte(message))
+	if err != nil {
+		return fmt.Errorf("failed to write message: %w", err)
+	}
+
+	err = writer.Close()
+	if err != nil {
+		return fmt.Errorf("failed to close writer: %w", err)
+	}
+
+	return client.Quit()
 }

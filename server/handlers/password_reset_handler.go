@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 	"github.com/zach-monroe/zetl/server/database"
 	"github.com/zach-monroe/zetl/server/models"
@@ -101,6 +102,16 @@ func ResetPasswordHandler(db *sql.DB) gin.HandlerFunc {
 		// Invalidate all other tokens for this user
 		database.InvalidateUserTokens(db, token.UserID)
 
-		c.JSON(http.StatusOK, gin.H{"message": "Password reset successful"})
+		// Auto-login: create session for the user
+		session := sessions.Default(c)
+		session.Set("user_id", token.UserID)
+		if err := session.Save(); err != nil {
+			log.Printf("Failed to create session after password reset: %v", err)
+			// Still return success - password was reset, just login failed
+			c.JSON(http.StatusOK, gin.H{"message": "Password reset successful"})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{"message": "Password reset successful", "redirect": "/"})
 	}
 }
