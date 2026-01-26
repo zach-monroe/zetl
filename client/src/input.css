@@ -690,6 +690,11 @@ body.modal-open {
   overflow: hidden;
 }
 
+/* Base body transition for prompt panel animation */
+body {
+  transition: padding-right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
 /* ===== Writing Prompt Panel Styles ===== */
 .prompt-panel {
   position: fixed;
@@ -714,7 +719,6 @@ body.modal-open {
 /* Resize main content when panel is open */
 body.prompt-panel-open {
   padding-right: 384px;
-  transition: padding-right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* Selected card styling */
