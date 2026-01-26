@@ -1,5 +1,6 @@
 server/.env
 client/.env
+k8s/.env
 server/schema/
 server/tmp/
 *.txt
