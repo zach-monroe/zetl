@@ -861,6 +861,292 @@ window.confirmDelete = confirmDelete;
 window.hideQuote = hideQuote;
 
 // ============================================
+// Writing Prompt Panel
+// ============================================
+const selectedQuotes = new Map(); // Map of quoteId -> quote data
+let promptPanelOpen = false;
+
+function initPromptPanel() {
+  const promptToggle = document.getElementById('prompt-toggle');
+  const promptPanel = document.getElementById('prompt-panel');
+  const promptPanelClose = document.getElementById('prompt-panel-close');
+  const generateBtn = document.getElementById('generate-prompt-btn');
+
+  if (!promptToggle || !promptPanel) return;
+
+  // Toggle panel
+  promptToggle.addEventListener('click', (e) => {
+    e.stopPropagation();
+    togglePromptPanel();
+  });
+
+  // Close panel
+  promptPanelClose?.addEventListener('click', () => {
+    closePromptPanel();
+  });
+
+  // Generate prompt
+  generateBtn?.addEventListener('click', () => {
+    generateWritingPrompt();
+  });
+
+  // Close panel on Escape key
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && promptPanelOpen) {
+      closePromptPanel();
+    }
+  });
+}
+
+function togglePromptPanel() {
+  const panel = document.getElementById('prompt-panel');
+  if (!panel) return;
+
+  if (promptPanelOpen) {
+    closePromptPanel();
+  } else {
+    openPromptPanel();
+  }
+}
+
+function openPromptPanel() {
+  const panel = document.getElementById('prompt-panel');
+  if (!panel) return;
+
+  panel.classList.add('open');
+  document.body.classList.add('prompt-panel-open', 'selection-mode');
+  promptPanelOpen = true;
+
+  // Initialize card selection handlers
+  initCardSelection();
+}
+
+function closePromptPanel() {
+  const panel = document.getElementById('prompt-panel');
+  if (!panel) return;
+
+  panel.classList.remove('open');
+  document.body.classList.remove('prompt-panel-open', 'selection-mode');
+  promptPanelOpen = false;
+
+  // Clear all selections
+  clearAllSelections();
+
+  // Reset panel state
+  resetPromptPanelState();
+}
+
+function clearAllSelections() {
+  selectedQuotes.clear();
+  document.querySelectorAll('.quote-card.selected').forEach(card => {
+    card.classList.remove('selected');
+  });
+  updatePromptBadge();
+  updateSelectedQuotesList();
+  updateGenerateButton();
+}
+
+function resetPromptPanelState() {
+  const instructions = document.getElementById('prompt-instructions');
+  const selectedSection = document.getElementById('selected-quotes-section');
+  const promptSection = document.getElementById('generated-prompt-section');
+  const loading = document.getElementById('prompt-loading');
+  const error = document.getElementById('prompt-error');
+
+  if (instructions) instructions.classList.remove('hidden');
+  if (selectedSection) selectedSection.classList.add('hidden');
+  if (promptSection) promptSection.classList.add('hidden');
+  if (loading) loading.classList.add('hidden');
+  if (error) error.classList.add('hidden');
+}
+
+function initCardSelection() {
+  document.querySelectorAll('.quote-card').forEach(card => {
+    // Remove existing handler if any
+    card.removeEventListener('click', handleCardSelectionClick);
+    // Add new handler
+    card.addEventListener('click', handleCardSelectionClick);
+  });
+}
+
+function handleCardSelectionClick(e) {
+  // Only handle selection when panel is open
+  if (!promptPanelOpen) return;
+
+  // Don't select if clicking on menu, footer, or other interactive elements
+  if (e.target.closest('.card-menu-container') ||
+      e.target.closest('.card-footer') ||
+      e.target.closest('.tag-pill') ||
+      e.target.closest('button')) {
+    return;
+  }
+
+  const card = e.currentTarget;
+  const quoteId = parseInt(card.dataset.quoteId);
+
+  if (selectedQuotes.has(quoteId)) {
+    // Deselect
+    selectedQuotes.delete(quoteId);
+    card.classList.remove('selected');
+  } else {
+    // Select (max 10)
+    if (selectedQuotes.size >= 10) {
+      showPromptError('Maximum 10 quotes can be selected');
+      return;
+    }
+
+    // Get quote data from card
+    const quoteText = card.querySelector('.quote-text')?.textContent?.trim() || '';
+    const author = card.querySelector('.text-cyan-400')?.textContent?.trim() || '';
+    const book = card.querySelector('.text-zinc-500.italic')?.textContent?.trim() || '';
+
+    selectedQuotes.set(quoteId, {
+      id: quoteId,
+      quote: quoteText.replace(/^"|"$/g, ''), // Remove surrounding quotes
+      author: author,
+      book: book
+    });
+    card.classList.add('selected');
+  }
+
+  updatePromptBadge();
+  updateSelectedQuotesList();
+  updateGenerateButton();
+}
+
+function updatePromptBadge() {
+  const badge = document.getElementById('prompt-badge');
+  if (!badge) return;
+
+  const count = selectedQuotes.size;
+  if (count > 0) {
+    badge.textContent = count;
+    badge.classList.remove('hidden');
+    badge.classList.add('flex');
+  } else {
+    badge.classList.add('hidden');
+    badge.classList.remove('flex');
+  }
+}
+
+function updateSelectedQuotesList() {
+  const section = document.getElementById('selected-quotes-section');
+  const list = document.getElementById('selected-quotes-list');
+  const countSpan = document.getElementById('selected-count');
+  const instructions = document.getElementById('prompt-instructions');
+
+  if (!section || !list) return;
+
+  if (selectedQuotes.size === 0) {
+    section.classList.add('hidden');
+    if (instructions) instructions.classList.remove('hidden');
+    return;
+  }
+
+  section.classList.remove('hidden');
+  if (instructions) instructions.classList.add('hidden');
+  if (countSpan) countSpan.textContent = selectedQuotes.size;
+
+  list.innerHTML = Array.from(selectedQuotes.values()).map(quote => `
+    <div class="mini-quote-card" data-quote-id="${quote.id}">
+      <div class="flex justify-between items-start gap-2">
+        <div class="flex-1 min-w-0">
+          <p class="text-zinc-300 text-sm line-clamp-2">"${escapeHtml(quote.quote.substring(0, 100))}${quote.quote.length > 100 ? '...' : ''}"</p>
+          <p class="text-amber-400/70 text-xs mt-1">- ${escapeHtml(quote.author)}</p>
+        </div>
+        <button onclick="removeSelectedQuote(${quote.id})" class="remove-btn p-1 rounded hover:bg-zinc-700 transition-colors">
+          <svg class="w-4 h-4 text-zinc-500 hover:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function removeSelectedQuote(quoteId) {
+  selectedQuotes.delete(quoteId);
+
+  // Remove selected class from card
+  const card = document.querySelector(`.quote-card[data-quote-id="${quoteId}"]`);
+  if (card) {
+    card.classList.remove('selected');
+  }
+
+  updatePromptBadge();
+  updateSelectedQuotesList();
+  updateGenerateButton();
+}
+
+function updateGenerateButton() {
+  const btn = document.getElementById('generate-prompt-btn');
+  if (!btn) return;
+
+  btn.disabled = selectedQuotes.size === 0;
+}
+
+async function generateWritingPrompt() {
+  if (selectedQuotes.size === 0) return;
+
+  const loading = document.getElementById('prompt-loading');
+  const error = document.getElementById('prompt-error');
+  const promptSection = document.getElementById('generated-prompt-section');
+  const promptResult = document.getElementById('prompt-result');
+  const generateBtn = document.getElementById('generate-prompt-btn');
+
+  // Show loading, hide others
+  if (loading) loading.classList.remove('hidden');
+  if (error) error.classList.add('hidden');
+  if (promptSection) promptSection.classList.add('hidden');
+  if (generateBtn) generateBtn.disabled = true;
+
+  try {
+    const quoteIds = Array.from(selectedQuotes.keys());
+
+    const response = await fetch('/api/generate-prompt', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin',
+      body: JSON.stringify({ quote_ids: quoteIds })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || 'Failed to generate prompt');
+    }
+
+    // Show result
+    if (promptResult) {
+      promptResult.textContent = data.prompt;
+    }
+    if (promptSection) promptSection.classList.remove('hidden');
+
+  } catch (err) {
+    showPromptError(err.message);
+  } finally {
+    if (loading) loading.classList.add('hidden');
+    if (generateBtn) generateBtn.disabled = selectedQuotes.size === 0;
+  }
+}
+
+function showPromptError(message) {
+  const error = document.getElementById('prompt-error');
+  if (error) {
+    error.textContent = message;
+    error.classList.remove('hidden');
+
+    // Auto-hide after 5 seconds
+    setTimeout(() => {
+      error.classList.add('hidden');
+    }, 5000);
+  }
+}
+
+// Global exports for onclick handlers
+window.removeSelectedQuote = removeSelectedQuote;
+
+// ============================================
 // Initialize Everything
 // ============================================
 document.addEventListener('DOMContentLoaded', () => {
@@ -871,6 +1157,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initModalHandlers();
   initCardData();
   initSearch();
+  initPromptPanel();
 
   // Check for ?add=true query parameter to open add modal
   const urlParams = new URLSearchParams(window.location.search);

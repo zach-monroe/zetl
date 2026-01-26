@@ -160,6 +160,9 @@ func setupRouter(dbConn *database.DBConnection) *gin.Engine {
 		// Quote modification (requires ownership)
 		apiGroup.PUT("/quote/:id", middleware.QuoteOwnershipRequired(dbConn.DB), handlers.UpdateQuoteHandler(dbConn.DB))
 		apiGroup.DELETE("/quote/:id", middleware.QuoteOwnershipRequired(dbConn.DB), handlers.DeleteQuoteHandler(dbConn.DB))
+
+		// Writing prompt generation
+		apiGroup.POST("/generate-prompt", handlers.GeneratePromptHandler(dbConn.DB))
 	}
 
 	return r

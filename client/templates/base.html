@@ -125,6 +125,16 @@
           </div>
         </div>
       </div>
+
+      {{ if .user }}
+      <!-- Writing Prompt Button -->
+      <button id="prompt-toggle" class="prompt-btn p-2 rounded-lg hover:bg-zinc-800/50 transition-colors duration-300 group relative" title="Generate Writing Prompt">
+        <svg class="w-5 h-5 text-zinc-400 group-hover:text-amber-400 transition-colors duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
+        </svg>
+        <span id="prompt-badge" class="hidden absolute -top-1 -right-1 w-4 h-4 bg-amber-500 text-white text-xs font-bold rounded-full flex items-center justify-center">0</span>
+      </button>
+      {{ end }}
     </div>
 
   </div>
