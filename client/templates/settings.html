@@ -177,7 +177,82 @@
         </div>
       </div>
     </div>
+
+    <!-- Add Quote Modal -->
+    <div id="add-modal" class="modal-overlay">
+      <div class="modal-content">
+        <h2 class="text-2xl font-bold text-zinc-100 mb-6">Add New Quote</h2>
+        <form id="add-form" class="space-y-4">
+          <div>
+            <label for="add-quote-text" class="block text-sm font-medium text-zinc-300 mb-2">Quote <span class="text-red-400">*</span></label>
+            <textarea
+              id="add-quote-text"
+              rows="4"
+              required
+              class="form-input w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-100 placeholder-zinc-500 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 focus:outline-none transition-colors resize-none"
+              placeholder="Enter the quote..."
+            ></textarea>
+          </div>
+          <div>
+            <label for="add-author" class="block text-sm font-medium text-zinc-300 mb-2">Author <span class="text-red-400">*</span></label>
+            <input
+              type="text"
+              id="add-author"
+              required
+              class="form-input w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-100 placeholder-zinc-500 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 focus:outline-none transition-colors"
+              placeholder="Author name..."
+            />
+          </div>
+          <div>
+            <label for="add-book" class="block text-sm font-medium text-zinc-300 mb-2">Book <span class="text-red-400">*</span></label>
+            <input
+              type="text"
+              id="add-book"
+              required
+              class="form-input w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-100 placeholder-zinc-500 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 focus:outline-none transition-colors"
+              placeholder="Book title..."
+            />
+          </div>
+          <div>
+            <label for="add-tags" class="block text-sm font-medium text-zinc-300 mb-2">Tags (comma separated)</label>
+            <input
+              type="text"
+              id="add-tags"
+              class="form-input w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-100 placeholder-zinc-500 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 focus:outline-none transition-colors"
+              placeholder="wisdom, philosophy, life..."
+            />
+          </div>
+          <div>
+            <label for="add-notes" class="block text-sm font-medium text-zinc-300 mb-2">Notes (optional)</label>
+            <textarea
+              id="add-notes"
+              rows="3"
+              class="form-input w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-100 placeholder-zinc-500 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 focus:outline-none transition-colors resize-none"
+              placeholder="Your thoughts on this quote..."
+            ></textarea>
+          </div>
+          <div id="add-error" class="hidden error-message bg-red-900/50 border border-red-700 text-red-200 px-4 py-3 rounded-lg text-sm"></div>
+          <div class="flex gap-3 justify-end pt-4">
+            <button
+              type="button"
+              onclick="closeAddModal()"
+              class="py-2 px-6 bg-zinc-700 hover:bg-zinc-600 text-zinc-200 font-medium rounded-lg transition-colors duration-200"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              class="btn-primary py-2 px-6 bg-cyan-600 hover:bg-cyan-500 text-white font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:ring-offset-2 focus:ring-offset-zinc-900"
+            >
+              Add Quote
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
     {{ template "header-scripts" . }}
+    <script src="/js/main.js"></script>
     <script>
       // Profile form handler
       document.getElementById('profile-form').addEventListener('submit', async (e) => {
