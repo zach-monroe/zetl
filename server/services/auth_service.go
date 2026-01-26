@@ -5,14 +5,13 @@ import (
 	"regexp"
 	"unicode"
 
+	"github.com/zach-monroe/zetl/server/config"
 	"golang.org/x/crypto/bcrypt"
 )
 
-const bcryptCost = 12
-
-// HashPassword generates a bcrypt hash of the password with cost 12
+// HashPassword generates a bcrypt hash of the password
 func HashPassword(password string) (string, error) {
-	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcryptCost)
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), config.BcryptCost)
 	if err != nil {
 		return "", err
 	}

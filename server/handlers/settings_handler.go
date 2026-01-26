@@ -26,8 +26,10 @@ func UpdateProfileHandler(db *sql.DB) gin.HandlerFunc {
 			return
 		}
 
+		ctx := c.Request.Context()
+
 		// Get current user
-		user, err := database.GetUserByID(db, userID.(int))
+		user, err := database.GetUserByID(ctx, db, userID.(int))
 		if err != nil {
 			c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
 			return
@@ -61,7 +63,7 @@ func UpdateProfileHandler(db *sql.DB) gin.HandlerFunc {
 		}
 
 		// Update profile
-		err = database.UpdateUserProfile(db, userID.(int), username, email, req.Bio)
+		err = database.UpdateUserProfile(ctx, db, userID.(int), username, email, req.Bio)
 		if err != nil {
 			if strings.Contains(err.Error(), "already exists") {
 				c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
@@ -90,8 +92,10 @@ func UpdatePasswordHandler(db *sql.DB) gin.HandlerFunc {
 			return
 		}
 
+		ctx := c.Request.Context()
+
 		// Get current user
-		user, err := database.GetUserByID(db, userID.(int))
+		user, err := database.GetUserByID(ctx, db, userID.(int))
 		if err != nil {
 			c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
 			return
@@ -117,7 +121,7 @@ func UpdatePasswordHandler(db *sql.DB) gin.HandlerFunc {
 		}
 
 		// Update password
-		err = database.UpdateUserPassword(db, userID.(int), hashedPassword)
+		err = database.UpdateUserPassword(ctx, db, userID.(int), hashedPassword)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update password"})
 			return
@@ -142,8 +146,10 @@ func UpdatePrivacyHandler(db *sql.DB) gin.HandlerFunc {
 			return
 		}
 
+		ctx := c.Request.Context()
+
 		// Get current user privacy settings
-		user, err := database.GetUserByID(db, userID.(int))
+		user, err := database.GetUserByID(ctx, db, userID.(int))
 		if err != nil {
 			c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
 			return
@@ -163,7 +169,7 @@ func UpdatePrivacyHandler(db *sql.DB) gin.HandlerFunc {
 		}
 
 		// Update privacy settings
-		err = database.UpdateUserPrivacy(db, userID.(int), settings)
+		err = database.UpdateUserPrivacy(ctx, db, userID.(int), settings)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update privacy settings"})
 			return

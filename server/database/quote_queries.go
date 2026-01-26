@@ -1,16 +1,15 @@
 package database
 
 import (
+	"context"
 	"database/sql"
-	"errors"
-	"strings"
 
 	"github.com/lib/pq"
 	"github.com/zach-monroe/zetl/server/models"
 )
 
 // GetQuoteByID retrieves a single quote by its ID
-func GetQuoteByID(db *sql.DB, quoteID int) (map[string]interface{}, error) {
+func GetQuoteByID(ctx context.Context, db *sql.DB, quoteID int) (map[string]interface{}, error) {
 	query := `
 		SELECT quote_id, user_id, quote, author, book, tags, COALESCE(notes, '') as notes
 		FROM quotes
@@ -27,22 +26,12 @@ func GetQuoteByID(db *sql.DB, quoteID int) (map[string]interface{}, error) {
 		notes  string
 	)
 
-	err := db.QueryRow(query, quoteID).Scan(&qID, &userID, &quote, &author, &book, &tags, &notes)
+	err := db.QueryRowContext(ctx, query, quoteID).Scan(&qID, &userID, &quote, &author, &book, &tags, &notes)
 	if err == sql.ErrNoRows {
-		return nil, errors.New("quote not found")
+		return nil, ErrQuoteNotFound
 	}
 	if err != nil {
 		return nil, err
-	}
-
-	// Parse tags array
-	tagsStr := string(tags)
-	clean := strings.Trim(tagsStr, "{}")
-	var tagsList []string
-	if len(clean) > 0 {
-		tagsList = strings.Split(clean, ",")
-	} else {
-		tagsList = []string{}
 	}
 
 	result := map[string]interface{}{
@@ -51,7 +40,7 @@ func GetQuoteByID(db *sql.DB, quoteID int) (map[string]interface{}, error) {
 		"quote":    quote,
 		"author":   author,
 		"book":     book,
-		"tags":     tagsList,
+		"tags":     ParsePostgresTags(tags),
 		"notes":    notes,
 	}
 
@@ -59,8 +48,8 @@ func GetQuoteByID(db *sql.DB, quoteID int) (map[string]interface{}, error) {
 }
 
 // UpdateQuote updates a quote's content
-func UpdateQuote(db *sql.DB, quoteID int, quote, author, book string, tags []string, notes string) error {
-	tagsStr := `{` + strings.Join(tags, `,`) + `}`
+func UpdateQuote(ctx context.Context, db *sql.DB, quoteID int, quote, author, book string, tags []string, notes string) error {
+	tagsStr := FormatPostgresTags(tags)
 
 	query := `
 		UPDATE quotes
@@ -68,7 +57,7 @@ func UpdateQuote(db *sql.DB, quoteID int, quote, author, book string, tags []str
 		WHERE quote_id = $6
 	`
 
-	result, err := db.Exec(query, quote, author, book, tagsStr, notes, quoteID)
+	result, err := db.ExecContext(ctx, query, quote, author, book, tagsStr, notes, quoteID)
 	if err != nil {
 		return err
 	}
@@ -79,17 +68,17 @@ func UpdateQuote(db *sql.DB, quoteID int, quote, author, book string, tags []str
 	}
 
 	if rowsAffected == 0 {
-		return errors.New("quote not found")
+		return ErrQuoteNotFound
 	}
 
 	return nil
 }
 
 // DeleteQuote removes a quote from the database
-func DeleteQuote(db *sql.DB, quoteID int) error {
+func DeleteQuote(ctx context.Context, db *sql.DB, quoteID int) error {
 	query := `DELETE FROM quotes WHERE quote_id = $1`
 
-	result, err := db.Exec(query, quoteID)
+	result, err := db.ExecContext(ctx, query, quoteID)
 	if err != nil {
 		return err
 	}
@@ -100,82 +89,34 @@ func DeleteQuote(db *sql.DB, quoteID int) error {
 	}
 
 	if rowsAffected == 0 {
-		return errors.New("quote not found")
+		return ErrQuoteNotFound
 	}
 
 	return nil
 }
 
-// GetQuotesByUserID retrieves all quotes for a specific user
-func GetQuotesByUserID(db *sql.DB, userID int) ([]map[string]interface{}, error) {
-	query := `
-		SELECT quote_id, user_id, quote, author, book, tags, COALESCE(notes, '') as notes
-		FROM quotes
-		WHERE user_id = $1
-		ORDER BY created_at DESC
-	`
-
-	rows, err := db.Query(query, userID)
+// GetQuotesByUserID retrieves all quotes for a specific user as maps
+func GetQuotesByUserID(ctx context.Context, db *sql.DB, userID int) ([]map[string]interface{}, error) {
+	quotes, err := FetchQuotesByUserID(ctx, db, userID)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
 
-	quotes := make([]map[string]interface{}, 0)
-
-	for rows.Next() {
-		var (
-			qID    int
-			uID    int
-			quote  string
-			author string
-			book   string
-			tags   []byte
-			notes  string
-		)
-
-		if err := rows.Scan(&qID, &uID, &quote, &author, &book, &tags, &notes); err != nil {
-			return nil, err
-		}
-
-		// Parse tags array
-		tagsStr := string(tags)
-		clean := strings.Trim(tagsStr, "{}")
-		var tagsList []string
-		if len(clean) > 0 {
-			tagsList = strings.Split(clean, ",")
-		} else {
-			tagsList = []string{}
-		}
-
-		result := map[string]interface{}{
-			"quote_id": qID,
-			"user_id":  uID,
-			"quote":    quote,
-			"author":   author,
-			"book":     book,
-			"tags":     tagsList,
-			"notes":    notes,
-		}
-
-		quotes = append(quotes, result)
+	result := make([]map[string]interface{}, len(quotes))
+	for i, q := range quotes {
+		result[i] = q.ToMap()
 	}
-
-	if err = rows.Err(); err != nil {
-		return nil, err
-	}
-
-	return quotes, nil
+	return result, nil
 }
 
 // VerifyQuoteOwnership checks if a user owns a specific quote
-func VerifyQuoteOwnership(db *sql.DB, quoteID, userID int) (bool, error) {
+func VerifyQuoteOwnership(ctx context.Context, db *sql.DB, quoteID, userID int) (bool, error) {
 	query := `SELECT user_id FROM quotes WHERE quote_id = $1`
 
 	var ownerID int
-	err := db.QueryRow(query, quoteID).Scan(&ownerID)
+	err := db.QueryRowContext(ctx, query, quoteID).Scan(&ownerID)
 	if err == sql.ErrNoRows {
-		return false, errors.New("quote not found")
+		return false, ErrQuoteNotFound
 	}
 	if err != nil {
 		return false, err
@@ -185,7 +126,7 @@ func VerifyQuoteOwnership(db *sql.DB, quoteID, userID int) (bool, error) {
 }
 
 // CreateQuote inserts a new quote into the database
-func CreateQuote(db *sql.DB, userID int, quote, author, book string, tags []string, notes string) (int, error) {
+func CreateQuote(ctx context.Context, db *sql.DB, userID int, quote, author, book string, tags []string, notes string) (int, error) {
 	tagsArray := pq.Array(tags)
 
 	query := `
@@ -195,7 +136,7 @@ func CreateQuote(db *sql.DB, userID int, quote, author, book string, tags []stri
 	`
 
 	var quoteID int
-	err := db.QueryRow(query, userID, quote, author, book, tagsArray, notes).Scan(&quoteID)
+	err := db.QueryRowContext(ctx, query, userID, quote, author, book, tagsArray, notes).Scan(&quoteID)
 	if err != nil {
 		return 0, err
 	}
@@ -204,7 +145,7 @@ func CreateQuote(db *sql.DB, userID int, quote, author, book string, tags []stri
 }
 
 // FetchQuotesByUserID retrieves all quotes for a specific user as models.Quotes
-func FetchQuotesByUserID(db *sql.DB, userID int) (models.Quotes, error) {
+func FetchQuotesByUserID(ctx context.Context, db *sql.DB, userID int) (models.Quotes, error) {
 	query := `
 		SELECT quote_id, user_id, quote, author, book, tags, COALESCE(notes, '') as notes
 		FROM quotes
@@ -212,7 +153,7 @@ func FetchQuotesByUserID(db *sql.DB, userID int) (models.Quotes, error) {
 		ORDER BY created_at DESC
 	`
 
-	rows, err := db.Query(query, userID)
+	rows, err := db.QueryContext(ctx, query, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -235,23 +176,13 @@ func FetchQuotesByUserID(db *sql.DB, userID int) (models.Quotes, error) {
 			return nil, err
 		}
 
-		// Parse tags array
-		tagsStr := string(tags)
-		clean := strings.Trim(tagsStr, "{}")
-		var tagsList []string
-		if len(clean) > 0 {
-			tagsList = strings.Split(clean, ",")
-		} else {
-			tagsList = []string{}
-		}
-
 		q := models.Quote{
 			QuoteID: qID,
 			UserID:  uID,
 			Quote:   quote,
 			Author:  author,
 			Book:    book,
-			Tags:    tagsList,
+			Tags:    ParsePostgresTags(tags),
 			Notes:   notes,
 		}
 

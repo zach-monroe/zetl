@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"database/sql"
+	"errors"
 	"net/http"
 	"strconv"
 
@@ -63,9 +64,9 @@ func QuoteOwnershipRequired(db *sql.DB) gin.HandlerFunc {
 		}
 
 		// Verify ownership
-		isOwner, err := database.VerifyQuoteOwnership(db, quoteID, userID.(int))
+		isOwner, err := database.VerifyQuoteOwnership(c.Request.Context(), db, quoteID, userID.(int))
 		if err != nil {
-			if err.Error() == "quote not found" {
+			if errors.Is(err, database.ErrQuoteNotFound) {
 				c.JSON(http.StatusNotFound, gin.H{"error": "Quote not found"})
 			} else {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to verify ownership"})

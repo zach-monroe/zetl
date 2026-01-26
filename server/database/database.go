@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 	"runtime"
 	"strconv"
-	"strings"
 
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
@@ -20,13 +19,13 @@ type DBConnection struct {
 }
 
 // StartDatabase connects to PostgreSQL using environment variables
-func StartDatabase() *DBConnection {
+func StartDatabase() (*DBConnection, error) {
 	_, filename, _, _ := runtime.Caller(0) // Gets database.go location
 	dir := filepath.Dir(filename)          // /path/to/server/database
 	parentDir := filepath.Dir(dir)         // /path/to/server (parent)
 	envPath := filepath.Join(parentDir, ".env")
 	if err := godotenv.Load(envPath); err != nil {
-		fmt.Printf("⚠️  .env not found at %s, using system env vars\n", envPath)
+		fmt.Printf(".env not found at %s, using system env vars\n", envPath)
 	}
 	host := os.Getenv("DB_HOSTNAME")
 	user := os.Getenv("DB_USERNAME")
@@ -36,7 +35,7 @@ func StartDatabase() *DBConnection {
 
 	port, err := strconv.Atoi(portStr)
 	if err != nil {
-		panic("Invalid DB_PORT: " + err.Error())
+		return nil, fmt.Errorf("invalid DB_PORT: %w", err)
 	}
 
 	psqlInfo := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable",
@@ -44,15 +43,15 @@ func StartDatabase() *DBConnection {
 
 	db, err := sql.Open("postgres", psqlInfo)
 	if err != nil {
-		panic(err)
+		return nil, fmt.Errorf("failed to open database: %w", err)
 	}
 
 	if err := db.Ping(); err != nil {
-		panic(err)
+		return nil, fmt.Errorf("failed to connect to database: %w", err)
 	}
 
-	fmt.Println("✅ Connected to database successfully.")
-	return &DBConnection{DB: db}
+	fmt.Println("Connected to database successfully.")
+	return &DBConnection{DB: db}, nil
 }
 func FetchQuotesAsJson(db *sql.DB) string {
 	query := "SELECT * FROM quotes"
@@ -88,18 +87,10 @@ func FetchQuotesAsJson(db *sql.DB) string {
 			// Handle SQL byte arrays, JSONB, and tags array conversion cleanly
 			switch v := val.(type) {
 			case []byte:
-				strVal := string(v)
-
-				// 🔥 Handle tags like {a,b,c}
 				if col == "tags" {
-					clean := strings.Trim(strVal, "{}")
-					if len(clean) > 0 {
-						entry[col] = strings.Split(clean, ",")
-					} else {
-						entry[col] = []string{}
-					}
+					entry[col] = ParsePostgresTags(v)
 				} else {
-					entry[col] = strVal
+					entry[col] = string(v)
 				}
 			default:
 				entry[col] = v
@@ -136,10 +127,10 @@ func AddQuoteToDatabase(db *sql.DB, jsonBytes []byte) error {
 		tags[i] = t.(string)
 	}
 
-	tagsStr := `{` + strings.Join(tags, `,`) + `}`
+	tagsStr := FormatPostgresTags(tags)
 
 	_, err := db.Exec(`
-        INSERT INTO quotes (user_id, quote, author, book, tags) 
+        INSERT INTO quotes (user_id, quote, author, book, tags)
         VALUES ($1, $2, $3, $4, $5)
     `, userID, quote, author, book, tagsStr)
 

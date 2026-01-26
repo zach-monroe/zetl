@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"html/template"
-	"log"
 	"net/http"
 	"os"
 	"strings"
@@ -13,21 +12,13 @@ import (
 	"github.com/gin-contrib/sessions/postgres"
 	"github.com/gin-gonic/gin"
 	_ "github.com/lib/pq"
+	"github.com/zach-monroe/zetl/server/config"
 	"github.com/zach-monroe/zetl/server/database"
 	"github.com/zach-monroe/zetl/server/handlers"
 	"github.com/zach-monroe/zetl/server/middleware"
 	"github.com/zach-monroe/zetl/server/models"
+	"github.com/zach-monroe/zetl/server/services"
 )
-
-//type Quote struct {
-//	QuoteID int      `json:"quote_id"`
-//	UserID  int      `json:"user_id"`
-//	Quote   string   `json:"quote"`
-//	Author  string   `json:"author"`
-//	Book    string   `json:"book"`
-//	Tags    []string `json:"tags"`
-//}
-//
 
 func UnmarshalQuotes(data []byte) (models.Quotes, error) {
 	var q models.Quotes
@@ -35,45 +26,7 @@ func UnmarshalQuotes(data []byte) (models.Quotes, error) {
 	return q, err
 }
 
-// getUserFromSession retrieves the user from session if logged in
-func getUserFromSession(c *gin.Context, db *database.DBConnection) map[string]interface{} {
-	session := sessions.Default(c)
-	userID := session.Get("user_id")
-
-	if userID == nil {
-		log.Printf("[Session Debug] user_id is nil in session")
-		return nil
-	}
-
-	log.Printf("[Session Debug] user_id from session: %v (type: %T)", userID, userID)
-
-	// Handle different integer types that the session store might return
-	var userIDInt int
-	switch v := userID.(type) {
-	case int:
-		userIDInt = v
-	case int64:
-		userIDInt = int(v)
-	case float64:
-		userIDInt = int(v)
-	default:
-		log.Printf("[Session Debug] Unexpected user_id type: %T", userID)
-		return nil
-	}
-
-	log.Printf("[Session Debug] Converted user_id to int: %d", userIDInt)
-
-	user, err := database.GetUserByID(db.DB, userIDInt)
-	if err != nil {
-		log.Printf("[Session Debug] Failed to get user by ID %d: %v", userIDInt, err)
-		return nil
-	}
-
-	log.Printf("[Session Debug] Successfully retrieved user: %s (ID: %d)", user.Username, user.ID)
-	return user.ToResponse()
-}
-
-func setupRouter(dbConn *database.DBConnection) *gin.Engine {
+func setupRouter(dbConn *database.DBConnection, emailService *services.EmailService, geminiService *services.GeminiService) *gin.Engine {
 	r := gin.Default()
 
 	// Set up PostgreSQL session store
@@ -90,7 +43,7 @@ func setupRouter(dbConn *database.DBConnection) *gin.Engine {
 	// Configure session options
 	store.Options(sessions.Options{
 		Path:     "/",
-		MaxAge:   86400, // 24 hours
+		MaxAge:   config.SessionMaxAge,
 		HttpOnly: true,
 		SameSite: http.SameSiteLaxMode,
 	})
@@ -116,7 +69,7 @@ func setupRouter(dbConn *database.DBConnection) *gin.Engine {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load quotes"})
 			return
 		}
-		user := getUserFromSession(c, dbConn)
+		user := handlers.GetUserFromSession(c, dbConn.DB)
 		c.HTML(http.StatusOK, "index.html", gin.H{"items": quotes, "user": user})
 	})
 
@@ -134,7 +87,7 @@ func setupRouter(dbConn *database.DBConnection) *gin.Engine {
 		authGroup.POST("/signup", handlers.SignupHandler(dbConn.DB))
 		authGroup.POST("/login", handlers.LoginHandler(dbConn.DB))
 		authGroup.POST("/logout", handlers.LogoutHandler())
-		authGroup.POST("/forgot-password", handlers.ForgotPasswordHandler(dbConn.DB))
+		authGroup.POST("/forgot-password", handlers.ForgotPasswordHandler(dbConn.DB, emailService))
 		authGroup.POST("/reset-password", handlers.ResetPasswordHandler(dbConn.DB))
 	}
 
@@ -162,16 +115,23 @@ func setupRouter(dbConn *database.DBConnection) *gin.Engine {
 		apiGroup.DELETE("/quote/:id", middleware.QuoteOwnershipRequired(dbConn.DB), handlers.DeleteQuoteHandler(dbConn.DB))
 
 		// Writing prompt generation
-		apiGroup.POST("/generate-prompt", handlers.GeneratePromptHandler(dbConn.DB))
+		apiGroup.POST("/generate-prompt", handlers.GeneratePromptHandler(dbConn.DB, geminiService))
 	}
 
 	return r
 }
 
 func main() {
-	dbConn := database.StartDatabase()
+	dbConn, err := database.StartDatabase()
+	if err != nil {
+		panic(fmt.Sprintf("Failed to start database: %v", err))
+	}
 	defer dbConn.DB.Close()
 
-	r := setupRouter(dbConn)
+	// Initialize services
+	emailService := services.NewEmailService()
+	geminiService := services.NewGeminiService()
+
+	r := setupRouter(dbConn, emailService, geminiService)
 	r.Run(":8080")
 }

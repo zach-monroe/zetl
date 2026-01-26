@@ -5,7 +5,6 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 	"github.com/zach-monroe/zetl/server/database"
 	"github.com/zach-monroe/zetl/server/models"
@@ -13,9 +12,7 @@ import (
 )
 
 // ForgotPasswordHandler handles password reset requests
-func ForgotPasswordHandler(db *sql.DB) gin.HandlerFunc {
-	emailService := services.NewEmailService()
-
+func ForgotPasswordHandler(db *sql.DB, emailService *services.EmailService) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var req models.ForgotPasswordRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
@@ -26,8 +23,10 @@ func ForgotPasswordHandler(db *sql.DB) gin.HandlerFunc {
 		// Always return success to prevent email enumeration
 		successMessage := "If an account exists with this email, you will receive a password reset link."
 
+		ctx := c.Request.Context()
+
 		// Look up user by email
-		user, err := database.GetUserByEmail(db, req.Email)
+		user, err := database.GetUserByEmail(ctx, db, req.Email)
 		if err != nil {
 			// User not found - still return success message
 			c.JSON(http.StatusOK, gin.H{"message": successMessage})
@@ -35,10 +34,10 @@ func ForgotPasswordHandler(db *sql.DB) gin.HandlerFunc {
 		}
 
 		// Invalidate any existing tokens for this user
-		database.InvalidateUserTokens(db, user.ID)
+		database.InvalidateUserTokens(ctx, db, user.ID)
 
 		// Create new reset token
-		token, err := database.CreatePasswordResetToken(db, user.ID)
+		token, err := database.CreatePasswordResetToken(ctx, db, user.ID)
 		if err != nil {
 			log.Printf("Failed to create password reset token: %v", err)
 			c.JSON(http.StatusOK, gin.H{"message": successMessage})
@@ -69,8 +68,10 @@ func ResetPasswordHandler(db *sql.DB) gin.HandlerFunc {
 			return
 		}
 
+		ctx := c.Request.Context()
+
 		// Verify token
-		token, err := database.GetPasswordResetToken(db, req.Token)
+		token, err := database.GetPasswordResetToken(ctx, db, req.Token)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid or expired reset token"})
 			return
@@ -90,23 +91,21 @@ func ResetPasswordHandler(db *sql.DB) gin.HandlerFunc {
 		}
 
 		// Update password
-		err = database.UpdateUserPassword(db, token.UserID, hashedPassword)
+		err = database.UpdateUserPassword(ctx, db, token.UserID, hashedPassword)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update password"})
 			return
 		}
 
 		// Mark token as used
-		database.MarkTokenAsUsed(db, token.ID)
+		database.MarkTokenAsUsed(ctx, db, token.ID)
 
 		// Invalidate all other tokens for this user
-		database.InvalidateUserTokens(db, token.UserID)
+		database.InvalidateUserTokens(ctx, db, token.UserID)
 
 		// Auto-login: create session for the user
-		session := sessions.Default(c)
-		session.Set("user_id", token.UserID)
-		if err := session.Save(); err != nil {
-			log.Printf("Failed to create session after password reset: %v", err)
+		if err := CreateUserSession(c, token.UserID); err != nil {
+			log.Printf("[PasswordReset] Failed to create session: %v", err)
 			// Still return success - password was reset, just login failed
 			c.JSON(http.StatusOK, gin.H{"message": "Password reset successful"})
 			return

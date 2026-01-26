@@ -4,33 +4,15 @@ import (
 	"database/sql"
 	"net/http"
 
-	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 	"github.com/zach-monroe/zetl/server/database"
 )
-
-// getUserFromSession retrieves the user from session if logged in
-func getUserFromSession(c *gin.Context, db *sql.DB) map[string]interface{} {
-	session := sessions.Default(c)
-	userID := session.Get("user_id")
-
-	if userID == nil {
-		return nil
-	}
-
-	user, err := database.GetUserByID(db, userID.(int))
-	if err != nil {
-		return nil
-	}
-
-	return user.ToResponse()
-}
 
 // LoginPageHandler renders the login page
 func LoginPageHandler(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Redirect if already logged in
-		if getUserFromSession(c, db) != nil {
+		if GetUserFromSession(c, db) != nil {
 			c.Redirect(http.StatusFound, "/")
 			return
 		}
@@ -44,7 +26,7 @@ func LoginPageHandler(db *sql.DB) gin.HandlerFunc {
 func SignupPageHandler(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Redirect if already logged in
-		if getUserFromSession(c, db) != nil {
+		if GetUserFromSession(c, db) != nil {
 			c.Redirect(http.StatusFound, "/")
 			return
 		}
@@ -78,7 +60,7 @@ func ResetPasswordPageHandler(db *sql.DB) gin.HandlerFunc {
 		}
 
 		// Check if token is valid
-		_, err := database.GetPasswordResetToken(db, token)
+		_, err := database.GetPasswordResetToken(c.Request.Context(), db, token)
 		if err != nil {
 			c.HTML(http.StatusOK, "reset-password.html", gin.H{
 				"title":         "Reset Password",
@@ -103,7 +85,7 @@ func SettingsPageHandler(db *sql.DB) gin.HandlerFunc {
 			return
 		}
 
-		user, err := database.GetUserByID(db, userID.(int))
+		user, err := database.GetUserByID(c.Request.Context(), db, userID.(int))
 		if err != nil {
 			c.Redirect(http.StatusFound, "/login")
 			return
@@ -125,14 +107,15 @@ func ProfilePageHandler(db *sql.DB) gin.HandlerFunc {
 			return
 		}
 
-		user, err := database.GetUserByID(db, userID.(int))
+		ctx := c.Request.Context()
+		user, err := database.GetUserByID(ctx, db, userID.(int))
 		if err != nil {
 			c.Redirect(http.StatusFound, "/login")
 			return
 		}
 
 		// Fetch user's quotes
-		quotes, err := database.FetchQuotesByUserID(db, userID.(int))
+		quotes, err := database.FetchQuotesByUserID(ctx, db, userID.(int))
 		if err != nil {
 			quotes = nil
 		}

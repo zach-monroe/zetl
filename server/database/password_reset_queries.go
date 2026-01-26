@@ -1,11 +1,13 @@
 package database
 
 import (
+	"context"
 	"crypto/rand"
 	"database/sql"
 	"encoding/hex"
-	"errors"
 	"time"
+
+	"github.com/zach-monroe/zetl/server/config"
 )
 
 type PasswordResetToken struct {
@@ -27,14 +29,13 @@ func GenerateToken() (string, error) {
 }
 
 // CreatePasswordResetToken creates a new password reset token for a user
-func CreatePasswordResetToken(db *sql.DB, userID int) (*PasswordResetToken, error) {
+func CreatePasswordResetToken(ctx context.Context, db *sql.DB, userID int) (*PasswordResetToken, error) {
 	token, err := GenerateToken()
 	if err != nil {
 		return nil, err
 	}
 
-	// Token expires in 1 hour
-	expiresAt := time.Now().Add(time.Hour)
+	expiresAt := time.Now().Add(config.PasswordResetExpiry)
 
 	query := `
 		INSERT INTO password_reset_tokens (user_id, token, expires_at)
@@ -49,7 +50,7 @@ func CreatePasswordResetToken(db *sql.DB, userID int) (*PasswordResetToken, erro
 		Used:      false,
 	}
 
-	err = db.QueryRow(query, userID, token, expiresAt).Scan(&prt.ID, &prt.CreatedAt)
+	err = db.QueryRowContext(ctx, query, userID, token, expiresAt).Scan(&prt.ID, &prt.CreatedAt)
 	if err != nil {
 		return nil, err
 	}
@@ -58,7 +59,7 @@ func CreatePasswordResetToken(db *sql.DB, userID int) (*PasswordResetToken, erro
 }
 
 // GetPasswordResetToken retrieves a valid, unused token
-func GetPasswordResetToken(db *sql.DB, token string) (*PasswordResetToken, error) {
+func GetPasswordResetToken(ctx context.Context, db *sql.DB, token string) (*PasswordResetToken, error) {
 	query := `
 		SELECT id, user_id, token, expires_at, used, created_at
 		FROM password_reset_tokens
@@ -66,7 +67,7 @@ func GetPasswordResetToken(db *sql.DB, token string) (*PasswordResetToken, error
 	`
 
 	prt := &PasswordResetToken{}
-	err := db.QueryRow(query, token, time.Now()).Scan(
+	err := db.QueryRowContext(ctx, query, token, time.Now()).Scan(
 		&prt.ID,
 		&prt.UserID,
 		&prt.Token,
@@ -76,7 +77,7 @@ func GetPasswordResetToken(db *sql.DB, token string) (*PasswordResetToken, error
 	)
 
 	if err == sql.ErrNoRows {
-		return nil, errors.New("invalid or expired token")
+		return nil, ErrTokenInvalid
 	}
 	if err != nil {
 		return nil, err
@@ -86,36 +87,36 @@ func GetPasswordResetToken(db *sql.DB, token string) (*PasswordResetToken, error
 }
 
 // MarkTokenAsUsed marks a token as used
-func MarkTokenAsUsed(db *sql.DB, tokenID int) error {
+func MarkTokenAsUsed(ctx context.Context, db *sql.DB, tokenID int) error {
 	query := `
 		UPDATE password_reset_tokens
 		SET used = true
 		WHERE id = $1
 	`
 
-	_, err := db.Exec(query, tokenID)
+	_, err := db.ExecContext(ctx, query, tokenID)
 	return err
 }
 
 // InvalidateUserTokens invalidates all pending tokens for a user
-func InvalidateUserTokens(db *sql.DB, userID int) error {
+func InvalidateUserTokens(ctx context.Context, db *sql.DB, userID int) error {
 	query := `
 		UPDATE password_reset_tokens
 		SET used = true
 		WHERE user_id = $1 AND used = false
 	`
 
-	_, err := db.Exec(query, userID)
+	_, err := db.ExecContext(ctx, query, userID)
 	return err
 }
 
 // CleanupExpiredTokens removes old expired tokens
-func CleanupExpiredTokens(db *sql.DB) error {
+func CleanupExpiredTokens(ctx context.Context, db *sql.DB) error {
 	query := `
 		DELETE FROM password_reset_tokens
 		WHERE expires_at < $1 OR used = true
 	`
 
-	_, err := db.Exec(query, time.Now().Add(-24*time.Hour))
+	_, err := db.ExecContext(ctx, query, time.Now().Add(-config.TokenCleanupAge))
 	return err
 }

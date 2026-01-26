@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/zach-monroe/zetl/server/config"
 	"github.com/zach-monroe/zetl/server/database"
 	"github.com/zach-monroe/zetl/server/services"
 )
@@ -15,10 +16,8 @@ type GeneratePromptRequest struct {
 }
 
 // GeneratePromptHandler handles the POST /api/generate-prompt endpoint
-func GeneratePromptHandler(db *sql.DB) gin.HandlerFunc {
+func GeneratePromptHandler(db *sql.DB, gemini *services.GeminiService) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// Initialize Gemini service
-		gemini := services.NewGeminiService()
 		if !gemini.IsConfigured() {
 			c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Writing prompt generation is not configured"})
 			return
@@ -35,15 +34,17 @@ func GeneratePromptHandler(db *sql.DB) gin.HandlerFunc {
 			return
 		}
 
-		if len(req.QuoteIDs) > 10 {
+		if len(req.QuoteIDs) > config.MaxQuotesPerPrompt {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Maximum 10 quotes allowed"})
 			return
 		}
 
+		ctx := c.Request.Context()
+
 		// Fetch quotes from database
 		var quotes []services.QuoteInput
 		for _, quoteID := range req.QuoteIDs {
-			quote, err := database.GetQuoteByID(db, quoteID)
+			quote, err := database.GetQuoteByID(ctx, db, quoteID)
 			if err != nil {
 				// Skip quotes that don't exist
 				continue

@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"database/sql"
+	"errors"
 	"net/http"
 	"strconv"
 
@@ -39,7 +40,7 @@ func CreateQuoteHandler(db *sql.DB) gin.HandlerFunc {
 		}
 
 		// Create quote
-		quoteID, err := database.CreateQuote(db, userID.(int), req.Quote, req.Author, req.Book, req.Tags, req.Notes)
+		quoteID, err := database.CreateQuote(c.Request.Context(), db, userID.(int), req.Quote, req.Author, req.Book, req.Tags, req.Notes)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create quote", "details": err.Error()})
 			return
@@ -74,9 +75,9 @@ func UpdateQuoteHandler(db *sql.DB) gin.HandlerFunc {
 		}
 
 		// Update quote
-		err := database.UpdateQuote(db, quoteID.(int), req.Quote, req.Author, req.Book, req.Tags, req.Notes)
+		err := database.UpdateQuote(c.Request.Context(), db, quoteID.(int), req.Quote, req.Author, req.Book, req.Tags, req.Notes)
 		if err != nil {
-			if err.Error() == "quote not found" {
+			if errors.Is(err, database.ErrQuoteNotFound) {
 				c.JSON(http.StatusNotFound, gin.H{"error": "Quote not found"})
 			} else {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update quote"})
@@ -99,9 +100,9 @@ func DeleteQuoteHandler(db *sql.DB) gin.HandlerFunc {
 		}
 
 		// Delete quote
-		err := database.DeleteQuote(db, quoteID.(int))
+		err := database.DeleteQuote(c.Request.Context(), db, quoteID.(int))
 		if err != nil {
-			if err.Error() == "quote not found" {
+			if errors.Is(err, database.ErrQuoteNotFound) {
 				c.JSON(http.StatusNotFound, gin.H{"error": "Quote not found"})
 			} else {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete quote"})
@@ -132,7 +133,7 @@ func GetUserQuotesHandler(db *sql.DB) gin.HandlerFunc {
 			return
 		}
 
-		quotes, err := database.GetQuotesByUserID(db, userID)
+		quotes, err := database.GetQuotesByUserID(c.Request.Context(), db, userID)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch quotes"})
 			return

@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"database/sql"
+	"errors"
 	"log"
 	"net/http"
 	"strings"
@@ -55,9 +56,11 @@ func SignupHandler(db *sql.DB) gin.HandlerFunc {
 			IsActive:     true,
 		}
 
-		if err := database.CreateUser(db, user); err != nil {
-			if strings.Contains(err.Error(), "already exists") {
-				c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+		if err := database.CreateUser(c.Request.Context(), db, user); err != nil {
+			if errors.Is(err, database.ErrUsernameExists) {
+				c.JSON(http.StatusConflict, gin.H{"error": "Username already exists"})
+			} else if errors.Is(err, database.ErrEmailExists) {
+				c.JSON(http.StatusConflict, gin.H{"error": "Email already exists"})
 			} else {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create user"})
 			}
@@ -65,15 +68,11 @@ func SignupHandler(db *sql.DB) gin.HandlerFunc {
 		}
 
 		// Create session
-		session := sessions.Default(c)
-		session.Set("user_id", user.ID)
-		log.Printf("[Signup Debug] Setting session user_id to: %d (type: %T)", user.ID, user.ID)
-		if err := session.Save(); err != nil {
-			log.Printf("[Signup Debug] Failed to save session: %v", err)
+		if err := CreateUserSession(c, user.ID); err != nil {
+			log.Printf("[Signup] Failed to create session: %v", err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create session"})
 			return
 		}
-		log.Printf("[Signup Debug] Session saved successfully for user: %s (ID: %d)", user.Username, user.ID)
 
 		c.JSON(http.StatusCreated, gin.H{
 			"message": "User created successfully",
@@ -97,9 +96,9 @@ func LoginHandler(db *sql.DB) gin.HandlerFunc {
 
 		// Check if it's an email (contains @)
 		if strings.Contains(req.UsernameOrEmail, "@") {
-			user, err = database.GetUserByEmail(db, req.UsernameOrEmail)
+			user, err = database.GetUserByEmail(c.Request.Context(), db, req.UsernameOrEmail)
 		} else {
-			user, err = database.GetUserByUsername(db, req.UsernameOrEmail)
+			user, err = database.GetUserByUsername(c.Request.Context(), db, req.UsernameOrEmail)
 		}
 
 		if err != nil {
@@ -120,20 +119,16 @@ func LoginHandler(db *sql.DB) gin.HandlerFunc {
 		}
 
 		// Update last login
-		if err := database.UpdateLastLogin(db, user.ID); err != nil {
+		if err := database.UpdateLastLogin(c.Request.Context(), db, user.ID); err != nil {
 			log.Printf("[Login Debug] Failed to update last_login: %v", err)
 		}
 
 		// Create session
-		session := sessions.Default(c)
-		session.Set("user_id", user.ID)
-		log.Printf("[Login Debug] Setting session user_id to: %d (type: %T)", user.ID, user.ID)
-		if err := session.Save(); err != nil {
-			log.Printf("[Login Debug] Failed to save session: %v", err)
+		if err := CreateUserSession(c, user.ID); err != nil {
+			log.Printf("[Login] Failed to create session: %v", err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create session"})
 			return
 		}
-		log.Printf("[Login Debug] Session saved successfully for user: %s (ID: %d)", user.Username, user.ID)
 
 		c.JSON(http.StatusOK, gin.H{
 			"message": "Login successful",
@@ -165,7 +160,7 @@ func GetCurrentUserHandler(db *sql.DB) gin.HandlerFunc {
 			return
 		}
 
-		user, err := database.GetUserByID(db, userID.(int))
+		user, err := database.GetUserByID(c.Request.Context(), db, userID.(int))
 		if err != nil {
 			c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
 			return
