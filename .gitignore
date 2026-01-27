@@ -1,6 +1,6 @@
 server/.env
 client/.env
-k8s/.env
+k8s/secret.yaml
 server/schema/
 server/tmp/
 *.txt

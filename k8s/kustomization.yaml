@@ -5,17 +5,10 @@ namespace: zetl
 
 resources:
   - namespace.yaml
+  - secret.yaml
   - deployment.yaml
   - service.yaml
   - ingress.yaml
-
-secretGenerator:
-  - name: zetl-secrets
-    envs:
-      - .env
-
-generatorOptions:
-  disableNameSuffixHash: true
 
 labels:
   - pairs:
