@@ -4,18 +4,15 @@ metadata:
   name: zetl
   namespace: zetl
   annotations:
-    # Uncomment for nginx ingress controller
-    # kubernetes.io/ingress.class: nginx
-    # Uncomment for cert-manager TLS
-    # cert-manager.io/cluster-issuer: letsencrypt-prod
+    cert-manager.io/cluster-issuer: letsencrypt-prod
 spec:
-  ingressClassName: nginx
+  ingressClassName: traefik
   tls:
     - hosts:
-        - zetl.example.com
+        - zetl.zachmonroe.cloud
       secretName: zetl-tls
   rules:
-    - host: zetl.example.com
+    - host: zetl.zachmonroe.cloud
       http:
         paths:
           - path: /

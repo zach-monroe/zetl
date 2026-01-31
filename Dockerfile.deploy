@@ -1,0 +1,25 @@
+FROM --platform=linux/amd64 alpine:3.19
+
+WORKDIR /app
+
+# Install runtime dependencies
+RUN apk add --no-cache ca-certificates tzdata
+
+# Create non-root user
+RUN addgroup -g 1000 zetl && \
+    adduser -u 1000 -G zetl -s /bin/sh -D zetl
+
+# Copy pre-built binary and client files
+COPY zetl-amd64 ./server/zetl
+COPY client ./client
+
+# Set ownership
+RUN chown -R zetl:zetl /app
+
+USER zetl
+
+WORKDIR /app/server
+
+EXPOSE 8080
+
+CMD ["./zetl"]

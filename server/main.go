@@ -60,6 +60,11 @@ func setupRouter(dbConn *database.DBConnection, emailService *services.EmailServ
 	r.Static("/css", "../client/css")
 	r.Static("/js", "../client/js")
 
+	// Health check endpoint (used by k8s probes)
+	r.GET("/healthz", func(c *gin.Context) {
+		c.String(http.StatusOK, "ok")
+	})
+
 	// Public page routes
 	r.GET("/", func(c *gin.Context) {
 		// Fetch quotes from database as JSON and unmarshal

@@ -9,9 +9,9 @@ resources:
   - deployment.yaml
   - service.yaml
   - ingress.yaml
+  - cluster-issuer.yaml
 
 labels:
   - pairs:
       app.kubernetes.io/name: zetl
       app.kubernetes.io/managed-by: kustomize
-    includeSelectors: true
