@@ -34,7 +34,7 @@ This project demonstrates end-to-end software development from local development
 ```
 ┌──────────┐    HTTPS    ┌──────────────────────┐    ┌─────────────────┐    ┌─────────────┐
 │  Client  │────────────▶│  Traefik Ingress     │───▶│   Zetl Pod      │───▶│  PostgreSQL │
-│ (Browser)│             │  (TLS termination)   │    │   (Go/Gin)      │    │  (Bare metal)│
+│ (Browser)│             │  (TLS termination)   │    │   (Go/Gin)      │    │ (Bare metal)│
 └──────────┘             └──────────────────────┘    └─────────────────┘    └─────────────┘
                                     │                        │
                          ┌──────────┴───────────┐            │
