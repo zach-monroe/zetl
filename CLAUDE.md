@@ -136,3 +136,77 @@ Uses STARTTLS for Gmail compatibility (port 587). Falls back to logging reset li
 **User**: ID, Username, Email, PasswordHash, Bio, PrivacySettings, CreatedAt, UpdatedAt, LastLogin, IsActive
 
 **Password validation**: Min 8 chars, requires uppercase, lowercase, and digit.
+
+## Infrastructure
+
+### Kubernetes Deployment
+
+The application runs on a 2-node K3s cluster:
+- **Control plane node**: Runs workloads and cluster management
+- **Worker node**: Runs workloads and bare-metal PostgreSQL
+
+Deployment files in `k8s/`:
+```
+deployment.yaml      # Zetl application deployment
+service.yaml         # ClusterIP service
+ingress.yaml         # Traefik ingress with TLS
+secret.yaml          # Environment variables (gitignored)
+```
+
+**Ingress**: Traefik with automatic TLS via cert-manager (letsencrypt-prod ClusterIssuer).
+
+**Storage**: Uses K3s `local-path` provisioner for PersistentVolumes.
+
+### Monitoring Stack
+
+Deployed via Helm (`prometheus-community/kube-prometheus-stack`) in `monitoring/` namespace:
+
+```
+monitoring/
+  values.yaml                    # Helm values for the stack
+  postgres-exporter/
+    deployment.yaml              # Scrapes PostgreSQL metrics
+    service.yaml                 # ClusterIP on port 9187
+    service-monitor.yaml         # Prometheus auto-discovery
+    secret.yaml                  # DB connection string (gitignored)
+```
+
+Components:
+- **Prometheus**: 15-day retention, 20Gi storage
+- **Grafana**: Exposed via ingress with TLS
+- **node-exporter**: DaemonSet on all nodes
+- **postgres-exporter**: Custom deployment for database metrics
+
+### Deployment Commands
+
+```bash
+# Deploy application
+kubectl apply -f k8s/
+
+# Install/upgrade monitoring stack
+helm upgrade --install kube-prometheus-stack prometheus-community/kube-prometheus-stack \
+  --namespace monitoring \
+  --values monitoring/values.yaml
+
+# Deploy postgres-exporter
+kubectl apply -f monitoring/postgres-exporter/
+
+# Check pod status
+kubectl get pods -n default
+kubectl get pods -n monitoring
+
+# Check certificates
+kubectl get certificate -A
+```
+
+### Hairpin NAT
+
+LAN devices cannot access the application via public IP due to hairpin NAT limitations. CoreDNS is configured with NodeHosts to resolve domains directly to the Traefik ingress ClusterIP for in-cluster and LAN traffic.
+
+## Security Notes
+
+- Never commit `.env` or `secret.yaml` files (both are gitignored)
+- Use `server/.env.example` as a template for local development
+- Kubernetes secrets should be created manually on the cluster, not stored in git
+- Password hashing uses bcrypt with cost factor 12
+- Session cookies are HttpOnly with SameSite=Lax
