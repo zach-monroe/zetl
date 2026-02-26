@@ -13,7 +13,7 @@ resources:
 images:
 - name: zachmonroe/zetl
   newName: zachmonroe/zetl
-  newTag: 032d779
+  newTag: 8e44aa6
 
 labels:
 - pairs:
