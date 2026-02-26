@@ -6,7 +6,8 @@ monitoring/values.yaml
 server/schema/
 server/tmp/
 *.txt
+!pi-client/requirements.txt
 DEPLOYMENT.md
 GUIDE.md 
 PLAN.md
-
+pi-client/.env

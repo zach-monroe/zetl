@@ -5,11 +5,14 @@ namespace: zetl
 
 resources:
   - namespace.yaml
-  - secret.yaml
   - deployment.yaml
   - service.yaml
   - ingress.yaml
   - cluster-issuer.yaml
+
+images:
+  - name: zachmonroe/zetl
+    newTag: latest
 
 labels:
   - pairs:

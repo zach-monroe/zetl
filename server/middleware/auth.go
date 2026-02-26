@@ -4,7 +4,9 @@ import (
 	"database/sql"
 	"errors"
 	"net/http"
+	"os"
 	"strconv"
+	"strings"
 
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
@@ -39,6 +41,45 @@ func OptionalAuth() gin.HandlerFunc {
 			c.Set("user_id", userID)
 		}
 
+		c.Next()
+	}
+}
+
+// APITokenRequired validates a Bearer token against the API_TOKEN env var
+// and sets user_id from API_TOKEN_USER_ID env var
+func APITokenRequired() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		apiToken := os.Getenv("API_TOKEN")
+		apiTokenUserID := os.Getenv("API_TOKEN_USER_ID")
+
+		if apiToken == "" || apiTokenUserID == "" {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "API token not configured"})
+			c.Abort()
+			return
+		}
+
+		authHeader := c.GetHeader("Authorization")
+		if !strings.HasPrefix(authHeader, "Bearer ") {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Authorization header required"})
+			c.Abort()
+			return
+		}
+
+		token := strings.TrimPrefix(authHeader, "Bearer ")
+		if token != apiToken {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
+			c.Abort()
+			return
+		}
+
+		userID, err := strconv.Atoi(apiTokenUserID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid API_TOKEN_USER_ID configuration"})
+			c.Abort()
+			return
+		}
+
+		c.Set("user_id", userID)
 		c.Next()
 	}
 }

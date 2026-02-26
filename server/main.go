@@ -123,6 +123,13 @@ func setupRouter(dbConn *database.DBConnection, emailService *services.EmailServ
 		apiGroup.POST("/generate-prompt", handlers.GeneratePromptHandler(dbConn.DB, geminiService))
 	}
 
+	// Device API routes - token-based auth for Pi client and other devices
+	deviceGroup := r.Group("/api/device")
+	deviceGroup.Use(middleware.APITokenRequired())
+	{
+		deviceGroup.POST("/quote", handlers.CreateQuoteHandler(dbConn.DB))
+	}
+
 	return r
 }
 
