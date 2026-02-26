@@ -4,17 +4,18 @@ kind: Kustomization
 namespace: zetl
 
 resources:
-  - namespace.yaml
-  - deployment.yaml
-  - service.yaml
-  - ingress.yaml
-  - cluster-issuer.yaml
+- namespace.yaml
+- deployment.yaml
+- service.yaml
+- ingress.yaml
+- cluster-issuer.yaml
 
 images:
-  - name: zachmonroe/zetl
-    newTag: latest
+- name: zachmonroe/zetl
+  newName: zachmonroe/zetl
+  newTag: 032d779
 
 labels:
-  - pairs:
-      app.kubernetes.io/name: zetl
-      app.kubernetes.io/managed-by: kustomize
+- pairs:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: zetl
