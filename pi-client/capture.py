@@ -83,6 +83,11 @@ def ocr_image(image_path: str) -> dict:
     )
 
     raw = message.content[0].text.strip()
+    if raw.startswith("```"):
+        raw = raw.split("\n", 1)[1]
+    if raw.endswith("```"):
+        raw = raw.rsplit("```", 1)[0]
+    raw = raw.strip()
     try:
         return json.loads(raw)
     except json.JSONDecodeError as e:
@@ -96,7 +101,8 @@ def post_quote(quote_data: dict) -> dict:
         "Content-Type": "application/json",
     }
     resp = requests.post(url, json=quote_data, headers=headers, timeout=10)
-    resp.raise_for_status()
+    if not resp.ok:
+        raise RuntimeError(f"HTTP {resp.status_code}: {resp.text}")
     return resp.json()
 
 
@@ -115,7 +121,7 @@ def run_once() -> bool:
 
         print("Posting to Zetl...")
         result = post_quote(quote_data)
-        print(f"  Success: quote ID {result.get('id', '?')} created")
+        print(f"  Success: quote ID {result.get('quote_id', '?')} created")
         return True
 
     except Exception as e:
